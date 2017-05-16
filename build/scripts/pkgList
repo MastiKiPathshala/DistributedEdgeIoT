@@ -1,7 +1,9 @@
 ../../LICENSE.txt
+../../bin
 ../../build/scripts/RELEASE_VERSION
-../../src/bin
-../../src/pkg
-../../src/platform
+../../pkg
 ../../src/node_modules
-../../src/go_modules
+../../src/platform
+../../thirdparty/bin
+../../thirdparty/pkg
+../../tools
