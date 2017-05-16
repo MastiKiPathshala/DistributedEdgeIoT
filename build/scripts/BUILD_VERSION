@@ -1,0 +1,29 @@
+#########################################################################
+#
+# $file: BUILD_VERSION
+#
+# @brief: Specifies build type, version
+#
+# @author: Prosenjit Pal
+#
+# @date: 16 May 2017 Initial Check in
+#
+# This file is subject to the terms and conditions defined in
+# file 'LICENSE.txt', which is part of this source code package.
+#
+########################################################################
+
+PRODUCT=securiot-gw
+BUILD_MAJOR=0
+BUILD_MINOR=1
+RELEASE=CI
+
+BUILD_PATCH=1
+BUILD_HOTFIX=""
+BUILD_SERVICEPACK=""
+
+#BUILD_CATEGORY="Internal"
+#BUILD_TYPE="Debug"
+#BUILD_HOW="Full"
+
+BUILD_TYPE="" 
