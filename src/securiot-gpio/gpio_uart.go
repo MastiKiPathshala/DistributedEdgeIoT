@@ -24,8 +24,7 @@ import (
  )
 
 func GpsSensorData(){
- 
-    time.AfterFunc(1000*time.Millisecond, GpsSensorData)
+
     out2, err := exec.Command( "bash", "-c", "gpspipe -w -n 8 | grep -m 1 TPV").Output()
    
     if err != nil {
@@ -57,4 +56,5 @@ func GpsSensorData(){
 		    
 		fmt.Println(token.Error())
 	}
+	time.AfterFunc(1000*time.Millisecond, GpsSensorData)
 }
