@@ -1,0 +1,74 @@
+#########################################################################
+#
+# $file: iptables.rules
+#
+# @brief: Defines device firewall rules
+#
+# @author: Prosenjit Pal
+#
+# @date: 17 May 2017   Initial settings
+#
+# This file is subject to the terms and conditions defined in
+# file 'LICENSE.txt', which is part of this source code package.
+#
+########################################################################
+*filter
+#  Allow all loopback (lo0) traffic
+-A INPUT -i lo -j ACCEPT
+-A OUTPUT -o lo -j ACCEPT
+
+#  Accept all established inbound/outbound connections
+-A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+-A OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+
+#  Accept NTP traffic
+-A INPUT -p udp --sport 123 -j ACCEPT
+-A OUTPUT -p udp --dport 123 -j ACCEPT
+
+#  Accept DNS traffic
+-A INPUT -p udp --sport 53 -j ACCEPT
+-A INPUT -p tcp --sport 53 -j ACCEPT
+-A OUTPUT -p udp --dport 53 -j ACCEPT
+-A OUTPUT -p tcp --dport 53 -j ACCEPT
+
+#  Accept MQTT traffic
+-A INPUT -p tcp --sport 1883 -j ACCEPT
+-A OUTPUT -p tcp --dport 1883 -j ACCEPT
+
+
+#  Allow local IP traffic on HTTP/SSH
+#  Allow HTTP, HTTPS, MQTT connections
+-A INPUT -p tcp -m multiport --dport 80,443 -s 10.0.0.0/8 -j ACCEPT
+-A INPUT -p tcp -m multiport --dport 80,443 -s 172.16.0.0/12 -j ACCEPT
+-A INPUT -p tcp -m multiport --dport 80,443 -s 192.168.0.0/16 -j ACCEPT
+
+#  Allow SSH connections
+#  The -dport number should be the same port number you set in sshd_config
+-A INPUT -p tcp -m state --state NEW --dport 22 -s 10.0.0.0/8 -j ACCEPT
+-A INPUT -p tcp -m state --state NEW --dport 22 -s 172.16.0.0/12 -j ACCEPT
+-A INPUT -p tcp -m state --state NEW --dport 22 -s 192.168.0.0/16 -j ACCEPT
+
+# Allow USB Configurator over 192.168.42/24 network
+-A INPUT -p tcp -m multiport --dport 80,443 -s 192.168.42.0/24 -j ACCEPT
+
+#  Allow ping, for all
+-A INPUT -p icmp -j ACCEPT
+-A OUTPUT -p icmp -j ACCEPT
+
+#  Accept sending traffic to Azure IoT Cloud
+
+-A OUTPUT -p tcp -m multiport --dports 80,443,1883 -d zreyas-iot-lab.azure-devices.net -j ACCEPT
+
+#  Accept sending traffic to AWS IoT Cloud
+
+#  LOG inbound drops
+#-A INPUT -m limit --limit 10/min -j LOG --log-level 7 --log-prefix "IP INPUT drop: "
+-A INPUT -j DROP
+
+#  LOG outbound drops
+#-A OUTPUT -m limit --limit 10/min -j LOG --log-level 7 --log-prefix "IP OUTPUT drop: "
+-A OUTPUT -j DROP
+
+#  No forward traffic
+-A FORWARD -j DROP
+COMMIT
