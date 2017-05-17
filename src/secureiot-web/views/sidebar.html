@@ -1,0 +1,66 @@
+<div class="left side-menu">
+    <div class="sidebar-inner slimscrollleft">
+        <div class="user-details">
+            <div class="pull-left">
+                <img src="images/avatar-1.jpg" alt="" class="thumb-md img-circle">
+            </div>
+            <div class="user-info">
+                <div class="dropdown">
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" aria-expanded="false" id="user">Loading..<span class="caret"></span></a>
+                    <ul class="dropdown-menu">
+                        <li><a href="javascript:logout()"><i class="md md-settings-power"></i> Logout</a></li>
+                    </ul>
+                </div>
+
+                <p class="text-muted m-0" id="userName">Loading</p>
+
+
+            </div>
+        </div>
+
+
+        <!DOCTYPE html>
+        <html>
+            <head>
+                <style>
+                    #map {
+                        height: 200px;
+                        width: 100%;
+                    }
+                </style>
+            </head>
+            <body>
+                <div id="map"></div>
+                <script async defer
+                    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCAfso6vd-DgN4XaTfwnK-V2iExn9qjJTc">
+                </script>
+            </body>
+        </html>
+
+
+        <!--- Divider -->
+        <div id="sidebar-menu">
+            <ul>
+                <li class="has_sub">
+                    <a href="#" class="waves-effect {{#dashboard}}active{{/dashboard}}"><i class="md md-settings-input-antenna"></i><span> Dashboard </span><span class="pull-right"><i class="md md-add"></i></span></a>
+                    <ul class="list-unstyled">
+                        <li class="{{#dashboard}}active{{/dashboard}}"><a href="dashboard.html">Dashboard</a></li>
+                    </ul>
+                </li>
+
+
+                <li class="has_sub">
+                    <a href="#" class="waves-effect {{#managment}}active{{/managment}}"><i class="md md-perm-data-setting"></i><span> Management </span><span class="pull-right"><i class="md md-add"></i></span></a>
+                    <ul class="list-unstyled">
+                        <li class="{{#upgrade}}active{{/upgrade}}"><a href="upgrade.html">Upgrade</a></li>
+                        <li class="{{#restart}}active{{/restart}}"><a href="restart.html">Restart</a></li>
+
+                    </ul>
+                </li>
+
+            </ul>
+            <div class="clearfix"></div>
+        </div>
+        <div class="clearfix"></div>
+    </div>
+</div>
