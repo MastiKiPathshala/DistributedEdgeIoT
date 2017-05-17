@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html>
+   <head>
+      {{>head}}
+      <meta http-equiv="cache-control" content="max-age=0" />
+      <meta http-equiv="cache-control" content="no-cache" />
+      <meta http-equiv="expires" content="0" />
+      <meta http-equiv="expires" content="Tue, 01 Jan 1980 1:00:00 GMT" />
+      <meta http-equiv="pragma" content="no-cache" />
+
+      <style>
+
+      .online {
+          color: #a0d269;
+      }
+      .offline{
+          color: orange;
+      }
+
+      .rectangle_full_false {
+         width: 5px;
+         height: 30px;
+         background: linear-gradient(to top, orange, #e59400 50%);
+         border: 2px solid white;
+         top:20px;
+      }.rectangle_half_true {
+         width: 5px;
+         height: 30px;
+         background: linear-gradient(to top, green, white 50%);
+         border: 2px solid white;
+         top:20px;
+      }
+      .rectangle_half_false {
+         width: 5px;
+         height: 30px;
+         background: linear-gradient(to top, orange, white 50%);
+         border: 2px solid white;
+         top:20px;
+      }
+      .rectangle_empty_true {
+         width: 5px;
+         height: 30px;
+         background: linear-gradient(to top, grey, white 40%);
+         border: 2px solid white;
+         top:20px;
+      }.rectangle_empty_false {
+         width: 5px;
+         height: 30px;
+         background: linear-gradient(to top, grey, white 50%);
+         border: 2px solid white;
+         top:20px;
+      }
+      </style>
+
+   </head>
+
+   <body class="fixed-left">
+
+      <!-- Begin page -->
+      <div id="wrapper">
+
+         <!-- Top Bar Start -->
+         <div class="topbar">
+            <!-- LOGO -->
+            <div class="topbar-left">
+               <div class="text-center">
+                  <a href="index.html" class="logo"><img src="images/logo.png"/><span style="font-size:14px">Distributed Edge IOT Datahub</span></a>
+               </div>
+            </div>
+
+            <!-- Button mobile view to collapse sidebar menu -->
+            <div class="navbar navbar-default" role="navigation">
+                <div class="container">
+                    <div class="">
+                       <div class="pull-left">
+                          <button class="button-menu-mobile open-left">
+                              <i class="fa fa-bars"></i>
+                          </button>
+                          <span class="clearfix"></span>
+                       </div>
+
+                       <ul class="nav navbar-nav navbar-right pull-right">
+                          <li class="hidden-xs">
+                             <a href="#" class="waves-effect waves-light"><i class="fa fa-circle offline" id='wsIndicator'></i></a>
+                          </li>
+
+                          <li class="hidden-xs">
+                             <a href="#" class="waves-effect rectangle_empty_false" id='qIndicator'><i class="" ></i></a>
+                          </li>
+
+                          <li class="hidden-xs">
+                             <a href="javascript:refresh()" class="waves-effect waves-light"><i id="refreshSpinner" class="md md-autorenew"></i></a>
+                          </li>
+
+                          <li class="hidden-xs">
+                             <a href="#" id="btn-fullscreen" class="waves-effect waves-light"><i class="md md-crop-free"></i></a>
+                          </li>
+
+                          <li class="dropdown">
+                             <a href="" class="dropdown-toggle profile" data-toggle="dropdown" aria-expanded="true"><img src="images/avatar-1.jpg" alt="user-img" class="img-circle"> </a>
+                             <ul class="dropdown-menu">
+                                <li><a href="javascript:refresh();"><i class="md md-autorenew"></i> Refresh</a></li>
+                                <li><a href="javascript:logout();"><i class="md md-settings-power"></i> Logout</a></li>
+                              </ul>
+                           </li>
+                       </ul>
+                    </div>
+                    <!--/.nav-collapse -->
+                </div>
+            </div>
+         </div>
+         <!-- Top Bar End -->
+
+         <!-- ========== Left Sidebar Start ========== -->
+         {{> sidebar}}
+         <!-- ========== Left Sidebar End ========== -->
+
+         <!-- ============================================================== -->
+         <!-- Start right Content here -->
+         <!-- ============================================================== -->
+         <div class="content-page">
+            <!-- Start content -->
+            <div class="content">
+               <div class="container">
+
+                  <!-- Page-Title -->
+                  <div class="row">
+                     <div class="col-sm-12">
+                        <h4 class="pull-left page-title">Welcome !</h4>
+                        <ol class="breadcrumb pull-right">
+                           <li>ProDistributed Edge IOT</li>
+                           <li class="active">Dashboard</li>
+                        </ol>
+                     </div>
+                  </div>
+
+                  <div class="row">
+                     <!-- INBOX -->
+                     <div class="col-lg-12" id="sensorHolder"> </div>
+                  </div>
+
+               </div> <!-- container -->
+
+            </div> <!-- content -->
+
+            <footer class="footer text-right">
+               2015 © Distributed Edge IOT.
+            </footer>
+
+         </div>
+      </div>
+      <!-- END wrapper -->
+
+      <script>
+         var resizefunc = [];
+      </script>
+
+      <!-- jQuery  -->
+      <script src="js/jquery.min.js"></script>
+      <script src="js/bootstrap.min.js"></script>
+      <script src="js/waves.js"></script>
+      <script src="js/wow.min.js"></script>
+      <script src="js/jquery.nicescroll.js" type="text/javascript"></script>
+      <script src="js/jquery.scrollTo.min.js"></script>
+      <script src="assets/chat/moment-2.2.1.js"></script>
+      <script src="assets/jquery-detectmobile/detect.js"></script>
+      <script src="assets/fastclick/fastclick.js"></script>
+      <script src="assets/jquery-slimscroll/jquery.slimscroll.js"></script>
+      <script src="assets/jquery-blockui/jquery.blockUI.js"></script>
+      <!-- sweet alerts -->
+      <script src="assets/sweet-alert/sweet-alert.min.js"></script>
+      <script src="assets/sweet-alert/sweet-alert.init.js"></script>
+      <!-- Counter-up -->
+      <script src="assets/counterup/waypoints.min.js" type="text/javascript"></script>
+      <script src="assets/counterup/jquery.counterup.min.js" type="text/javascript"></script>
+      <script src="/socket.io/socket.io.js"></script>
+      <!-- CUSTOM JS -->
+      <script src="js/jquery.app.js"></script>
+      <!-- Dashboard -->
+      <script src="js/jquery.dashboard.js"></script>
+      <!-- Chat -->
+      <script src="js/jquery.chat.js"></script>
+      <!-- Todo -->
+      <script src="js/jquery.todo.js"></script>
+      <script src="assets/jquery-sparkline/jquery.sparkline.min.js"></script>
+      <script src="js/function.js"></script>
+      <script src="assets/jquery-sparkline/charts-sparkline.js"></script>
+      <script type="text/javascript">
+         /* ==============================================
+         Counter Up
+         =============================================== */
+         jQuery(document).ready(function($) {
+            validateUser();
+            homeInit();
+            $('.counter').counterUp({
+               delay: 100,
+               time: 1200
+            });
+         });
+      </script>
+   </body>
+</html>
