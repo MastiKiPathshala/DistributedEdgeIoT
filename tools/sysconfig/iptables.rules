@@ -32,7 +32,7 @@
 -A OUTPUT -p tcp --dport 53 -j ACCEPT
 
 #  Accept MQTT traffic
--A INPUT -p tcp --sport 1883 -j ACCEPT
+-A INPUT -p tcp --dport 1883 -j ACCEPT
 -A OUTPUT -p tcp --dport 1883 -j ACCEPT
 
 

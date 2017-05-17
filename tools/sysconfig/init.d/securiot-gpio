@@ -11,8 +11,8 @@
 ### END INIT INFO
 
 
-#	CLI /usr/bin/nodejs /usr/bin/forever-service install securiot-gpio -f  -c /bin/bash /home/Embs1PSL/securiot-gateway/bin/securiot-gpio.sh --logrotateFrequency “size 10M” --logrotateMax 10
-#	Working Directory /home/Embs1PSL/securiot-gateway/bin
+#	CLI /usr/bin/nodejs /usr/bin/forever-service install securiot-gpio -f  -c /bin/bash /home/Kat@ppa/securiot-gateway/bin/securiot-gpio.sh --logrotateFrequency “size 10M” --logrotateMax 10
+#	Working Directory /home/Kat@ppa/securiot-gateway/bin
 
 #Setup Environment variables (if any)
 
@@ -71,7 +71,7 @@ start() {
 
 	
 	# move to the directory from where the inital forever script was launched so that even if it is relative it works as expected
-	cd /home/Embs1PSL/securiot-gateway/src/bin
+	cd /home/Kat@ppa/securiot-gateway/bin
 
 	
 
@@ -83,7 +83,7 @@ start() {
 	--minUptime $MIN_UPTIME \
 	--spinSleepTime $SPIN_SLEEP_TIME \
 	--killSignal $KILL_SIGNAL \
-	-c /bin/bash /home/Embs1PSL/securiot-gateway/bin/securiot-gpio.sh  2>&1 >/dev/null
+	-c /bin/bash /home/Kat@ppa/securiot-gateway/bin/securiot-gpio.sh  2>&1 >/dev/null
 	
 	RETVAL=$?
 

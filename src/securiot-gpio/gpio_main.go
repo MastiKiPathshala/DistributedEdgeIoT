@@ -117,7 +117,7 @@ var ReadMessage MQTT.MessageHandler = func (client MQTT.Client, msg MQTT.Message
   
 func ReadConfigFiles (){
      
-	dat, err := ioutil.ReadFile("../../config.txt")
+	dat, err := ioutil.ReadFile("/etc/securiot.in/config.txt")
 	
     if err != nil {
 	
@@ -254,7 +254,7 @@ func BleSensor(){
 	
  
 }
- 
+/* 
 func GpsSensorData(){
  
     time.AfterFunc(1000*time.Millisecond, GpsSensorData)
@@ -288,7 +288,7 @@ func GpsSensorData(){
 		fmt.Println(token.Error())
 	}
 }
- 
+*/ 
 func RaspberryUartHw (){
  
 	fmt.Println("RaspberryUartHw")
