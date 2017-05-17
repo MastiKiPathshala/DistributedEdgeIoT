@@ -1,6 +1,6 @@
 /*************************************************************************
  *
- * $file: gpio_main.go
+ * $file: gpio_uart.go
  *
  * @brief: GPIO module code
  *
@@ -13,40 +13,48 @@
  *
  ************************************************************************/
 
- package main
- 
- import (
- 
-    "fmt"
+package main
+	
+import (
+	
+	"fmt"
     "encoding/json"
 	"os/exec"
 	"time"
  )
 
- func GpsSensorData(){
+func GpsSensorData(){
  
-   time.AfterFunc(1000*time.Millisecond, GpsSensorData)
-   out2, err := exec.Command( "bash", "-c", "gpspipe -w -n 8 | grep -m 1 TPV").Output()
+    time.AfterFunc(1000*time.Millisecond, GpsSensorData)
+    out2, err := exec.Command( "bash", "-c", "gpspipe -w -n 8 | grep -m 1 TPV").Output()
    
-   if err != nil {
+    if err != nil {
+	
         fmt.Println("error occured")
         fmt.Printf("%s", err)
-   }
+		
+    }
 	
 	var latlon map[string]interface{}
 	
 	err2 := json.Unmarshal(out2, &latlon)
+	
 	if err2 != nil {
+	
 		fmt.Println("error:", err2)
+		
 	}
-	//fmt.Println(latlon)
 	
 	lat := latlon["lat"]
-    fmt.Println("latitude ", lat)
+	log.Critical("latitude critical", lat)
+    //fmt.Println("latitude ", lat)
 	
 	lon := latlon["lon"]
-    fmt.Println("longitude ", lon)
+	log.Debug("longitude debug", lon)
+    //fmt.Println("longitude ", lon)
 	
-	/*strs := latlon["tag"].(string)
-    fmt.Println(strs)*/
- }
+	if token := client.Publish("gps-data", 0, false, out2); token.Error() != nil {
+		    
+		fmt.Println(token.Error())
+	}
+}

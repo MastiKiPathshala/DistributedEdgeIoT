@@ -1,0 +1,50 @@
+{
+  "gatewaySaurabhpi": {
+	"gateway-id":"b8: c2:0:c8",
+    
+	"server-config": {
+
+		"management": {
+			"url": "azure.com",
+			"port": 8080,
+			"protocol": "http"
+		},
+		"control": {
+			"url": "azure.com",
+			"port": 8080,
+			"protocol": "http"
+		},
+		"data": {
+			"server-type":"azure",
+			"azure-config": {
+				"primary-key": "ssado29865233jhgs",
+				"device-name": "saurabhHub",
+				"iot-hub-name": "mkp-hub",
+				"protocol": "http"
+			}
+		 	
+		}
+	},
+	"sensor-config":[ 
+    {   
+	    "id": "b286183",
+	 	"connection-type": "gpio",
+		"connection-protocol": "uart",
+		"data-type": "gps",
+		"data-template-id": "sbh1",
+		"controller-type": 1,
+		"mapped-asset-id": "b1290jkl"
+	},
+	{   
+	    "id": "s205",
+	 	"connection-type": "ble",
+		"connection-protocol": "ble",
+		"data-type": "HY",
+		"data-template-id": "sbh1",
+		"controller-type": 1,
+		"mapped-asset-id": "b1290jkl"
+	}
+	
+	]	
+  }
+}
