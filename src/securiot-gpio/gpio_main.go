@@ -1,3 +1,6 @@
+GPIO_MAIN
+
+
 /*************************************************************************
  *
  * $file: gpio_main.go
@@ -21,20 +24,42 @@ import (
 	"fmt"
     "io/ioutil"
     "encoding/json"
-	//s "strings"
 	"os/exec"
 	"time"
 	"sync"
 	"flag"
 	"os"
 	MQTT "github.com/eclipse/paho.mqtt.golang"
+	"github.com/op/go-logging"
 )
  
+var log = logging.MustGetLogger("example")
+
+var format = logging.MustStringFormatter(
+	`%{color}%{time:15:04:05.000} %{shortfunc} ? %{level:.4s} %{id:03x}%{color:reset} %{message}`,
+)
+
+type Password string
+
+func (p Password) Redacted() interface{} {
+	return logging.Redact(string(p))
+} 
+  
 var client MQTT.Client
 var topic *string
  
 func main () { 
+    
+    backend1 := logging.NewLogBackend(os.Stderr, "", 0)
+	backend2 := logging.NewLogBackend(os.Stderr, "", 0)
+	
+	backend2Formatter := logging.NewBackendFormatter(backend2, format)
 
+	backend1Leveled := logging.AddModuleLevel(backend1)
+	backend1Leveled.SetLevel(logging.INFO, "")
+
+	logging.SetBackend(backend1Leveled, backend2Formatter)
+    
 	SubscribeMqtt ()
     ReadConfigFiles ()
 
@@ -207,12 +232,9 @@ func validateProtocolDataType (protocol, dataType string){
 	 
 	switch matchConnectionProtocol {
 	    
-		case "uart-gps":
-		    
-			out1, err1 := exec.Command( "bash", "-c", "sudo gpsd /dev/ttyS0 -F /var/run/gpsd.sock").Output()
-            _,_ = out1,err1
-			
-		case "ble-HY":
+		case "uart":
+		 	
+		case "ble":
 		    
 	}
 	switch matchDataType {
@@ -235,60 +257,13 @@ func validateProtocolDataType (protocol, dataType string){
 	 
 }
   
-var count int = 0
- 
 func BleSensor(){
- 
-    count ++
-	
-    if count > 5 {
-	
-	    wg.Done () 
-	
-	} else {
 	
 	    time.AfterFunc(1000*time.Millisecond, BleSensor)
-        fmt.Println("ble-HY")
-	
-	}
-	
- 
-}
-/* 
-func GpsSensorData(){
- 
-    time.AfterFunc(1000*time.Millisecond, GpsSensorData)
-    out2, err := exec.Command( "bash", "-c", "gpspipe -w -n 8 | grep -m 1 TPV").Output()
-   
-    if err != nil {
-	
-        fmt.Println("error occured")
-        fmt.Printf("%s", err)
+	    log.Warning("Warning","ble-HY")
 		
-    }
-	
-	var latlon map[string]interface{}
-	
-	err2 := json.Unmarshal(out2, &latlon)
-	
-	if err2 != nil {
-	
-		fmt.Println("error:", err2)
-		
-	}
-	
-	lat := latlon["lat"]
-    fmt.Println("latitude ", lat)
-	
-	lon := latlon["lon"]
-    fmt.Println("longitude ", lon)
-	
-	if token := client.Publish("gps-data", 0, false, out2); token.Error() != nil {
-		    
-		fmt.Println(token.Error())
-	}
 }
-*/ 
+ 
 func RaspberryUartHw (){
  
 	fmt.Println("RaspberryUartHw")
