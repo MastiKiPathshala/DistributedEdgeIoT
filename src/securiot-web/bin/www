@@ -1,0 +1,186 @@
+#!/usr/bin/env node
+
+
+/* define name for web-server */
+
+WEB_SVR_SVC      = 'securiot-web';
+WEB_SVR_SVC_NAME = WEB_SVR_SVC + '-service';
+WEB_SVR_SVC_PID  = WEB_SVR_SVC + '-pid';
+WEB_SVR_SVC_MSG  = WEB_SVR_SVC + '-upgrade-msg';
+
+/* logging module */
+
+log = require('loglevel');
+
+/* prepend timestamp */
+
+var originalFactory = log.methodFactory;
+
+log.methodFactory = function (methodName, logLevel, loggerName) {
+
+    var rawMethod = originalFactory(methodName, logLevel, loggerName);
+
+    return function (message) {
+
+       rawMethod('['+ new Date() + ']' + WEB_SVR_SVC + ': ' + message);
+    };
+};
+
+/* trace levels ("trace" ,"debug","info","warn","error") in increase order */
+log.setLevel('debug');
+
+var fs     = require('fs');
+var app    = require('../app');
+var http   = require('http');
+var exec   = require('child_process').exec;
+var redis  = require('redis');
+var sockio = require('socket.io');
+var moment = require('moment-timezone');
+
+redisUp = false;
+
+/* Redis Client */
+redisClient = redis.createClient();
+
+redisClient.on("connect", function()
+{
+   var now = moment();
+   var time_tz = now.tz("America/New_York").format('YYYY-MM-DDTHH:mm:ss.SSSZZ');
+
+   redisUp = true;
+
+   // store the process details in the redis db
+   redisClient.hmset(["ProcessDetails", WEB_SVR_SVC_NAME, 
+           JSON.stringify({pid:process.pid, startTime:time_tz})],
+           function (err, res) {
+              if (err) { log.error(err); }
+
+   });
+
+   redisClient.set(WEB_SVR_SVC_PID, process.pid, function(err, reply) {
+
+      if (err) {
+
+         log.debug('set pid failed');
+         setTimeout(process.exit(0), SYSTEM_DELAY);
+         return;
+      }
+
+      log.debug('daemon set pid :' + process.pid);
+   });
+
+   redisClient.hget("ProcessLogLevel", WEB_SVR_SVC_NAME, function(err, reply) {
+
+      if (err || !reply) {
+
+         log.error('log-level get fail(' + err + ')');
+         logLevel = 'debug';
+
+         redisClient.hmset("ProcessLogLevel", WEB_SVR_SVC_NAME, logLevel, function(err, reply) {
+
+            log.info('Redis: set log-level(' + logLevel + ')');
+         });
+      } else {
+         logLevel = reply.toString();
+      }
+
+      log.debug('Redis: get log-level(' + logLevel + ')');
+
+      // set the log level
+      log.setLevel(logLevel);
+   });
+});
+
+redisClient.on("error", function(error) {
+
+   log.debug('redis disconnected (' + error + ')');
+   redisUp = false;
+});
+
+/* environment port get and store in Express.  */
+
+var port = normalizePort(process.env.PORT || '80');
+app.set('port', port);
+
+
+/* Create WEB server */
+
+var server = http.createServer(app);
+var io = socketio.listen(server);
+
+/* global io socket */
+
+ioSocket = null;
+
+io.sockets.on('connection', function (socket) {
+
+   log.trace('io socket connected');
+
+   ioSocket = socket;
+});
+
+
+/* listen on provided port */
+
+server.listen(port);
+server.on('error', onError);
+server.on('listening', onListening);
+
+/* port normalization => (a number, string, or false) */
+
+var normalizePort = function(val) 
+{
+   var port = parseInt(val, 10);
+
+   /* named pipe */
+   if (isNaN(port)) {
+      return val;
+   }
+
+   /* port number */
+   if (port >= 0) {
+      return port;
+   }
+
+   return false;
+}
+
+/* on "error" event */
+
+var onError = function(error)
+{
+   if (error.syscall != 'listen') {
+      throw error;
+   }
+
+   var bind = typeof port === 'string'
+      ?('Pipe ' + port) : ('Port ' + port);
+
+   // handle specific listen errors with friendly messages
+   switch (error.code) {
+
+   case 'EACCES':
+       log.error(bind + ' requires elevated privileges');
+       process.exit(1);
+       break;
+
+   case 'EADDRINUSE':
+       log.error(bind + ' is already in use');
+       process.exit(1);
+       break;
+
+   default:
+       throw error;
+   }
+}
+
+/* Event listener */
+
+var onListening = function() {
+
+   var addr = server.address();
+   var bind = (typeof addr === 'string')
+     ? ('pipe ' + addr) : ('port ' + addr.port);
+
+   log.debug(listening on (' + bind + ')');
+}
