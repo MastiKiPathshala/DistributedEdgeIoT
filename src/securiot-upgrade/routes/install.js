@@ -54,8 +54,8 @@ THIRDPARTY_LIB_DIR = WORKING_DIR + 'thirdparty/lib/';
 CURR_BACKUP_DIR = BACKUP_DIR;
 NEW_WORKING_DIR = BACKUP_DIR;
 
-MGMT_TIMEOUT = 5000;
-EXIT_TIMEOUT = 10000;
+SYS_DELAY = 5000;
+EXIT_DELAY = 10000;
 
 var fileUrl;
 var fileName;
@@ -105,7 +105,7 @@ redisClient.on("connect", function()
 
       pkgInstall(activeVersion, upgradeVersion);
 
-     }, MGMT_TIMEOUT);
+     }, SYS_DELAY);
 });
 
 redisClient.on("error", function(error)
@@ -220,12 +220,12 @@ var execCmd = function(cmd, options, working_dir, cb_error, cb_next)
        if (retCode) {
 
           log.debug ('Err:(' + retCode + ') '+ cmd + ' ' + options);
-          setTimeout(cb_error, MGMT_TIMEOUT);
+          setTimeout(cb_error, SYS_DELAY);
 
        } else {
 
           log.debug ('End: ' + cmd + ' ' + options);
-          setTimeout(cb_next, MGMT_TIMEOUT);
+          setTimeout(cb_next, SYS_DELAY);
        }
     });
 }
@@ -241,7 +241,6 @@ var execCmd1 = function(cmd, options, args1, working_dir, cb_error, cb_next)
 
          data += ' ';
          me.stderr = data.toString();
-         // log.debug(cmd + ': ERR:' + me.stderr);
     });
 
     child.stdout.on('data', function (data) {
@@ -286,12 +285,12 @@ var execCmd1 = function(cmd, options, args1, working_dir, cb_error, cb_next)
        if (retCode) {
 
           log.debug ('Err:(' + retCode + ') ' + cmd + ' ' + options + ' ' + args1);
-          setTimeout(cb_error, MGMT_TIMEOUT);
+          setTimeout(cb_error, SYS_DELAY);
 
        } else {
 
           log.debug ('End: ' + cmd + ' ' + options + ' ' + args1);
-          setTimeout(cb_next, MGMT_TIMEOUT);
+          setTimeout(cb_next, SYS_DELAY);
 
        }
     });
@@ -308,7 +307,6 @@ var execCmd2 = function(cmd, options, args0, args1, working_dir, cb_error, cb_ne
 
          data += ' ';
          me.stderr = data.toString();
-         // log.debug(cmd + ': ERR:' + me.stderr);
     });
 
     child.stdout.on('data', function (data) {
@@ -353,12 +351,12 @@ var execCmd2 = function(cmd, options, args0, args1, working_dir, cb_error, cb_ne
 
           log.debug ('Err:(' + retCode + ') '+ cmd + ' ' +
                       options + ' ' +args0 + ' ' + args1);
-          setTimeout(cb_error, MGMT_TIMEOUT);
+          setTimeout(cb_error, SYS_DELAY);
 
        } else {
 
           log.debug ('End: ' + cmd + ' ' + args0 + ' ' + args1);
-          setTimeout(cb_next, MGMT_TIMEOUT);
+          setTimeout(cb_next, SYS_DELAY);
        }
     });
 }
@@ -367,7 +365,6 @@ var execCmd2 = function(cmd, options, args0, args1, working_dir, cb_error, cb_ne
 
 var copyCmd = function (file1, file2, cb_error, cb_next, callback)
 {
-
    var cmd = execCmd1('cp', file1, file2, BASE_DIR,
 
        // on error
@@ -582,14 +579,14 @@ var runScript = function(script_name, cb_error, cb_next, callback)
 var errDone = function()
 {
    log.debug('Executing exit command (1)!');
-   setTimeout(process.exit(1), MGMT_TIMEOUT);
+   setTimeout(process.exit(1), SYS_DELAY);
 }
 
 var exitCmd = function()
 {
    log.debug('Executing exit command (0)!');
 
-   setTimeout(process.exit(0), MGMT_TIMEOUT);
+   setTimeout(process.exit(0), SYS_DELAY);
 }
 
 // main function block
@@ -600,7 +597,7 @@ var procDone = function()
 
    publishMessage(updateState + ' installation complete');
 
-   setTimeout(exitCmd, EXIT_TIMEOUT);
+   setTimeout(exitCmd, EXIT_DELAY);
 }
 
 var procErr = function()
@@ -609,7 +606,7 @@ var procErr = function()
 
    publishMessage(updateState + ' installation fail');
 
-   setTimeout(errDone, EXIT_TIMEOUT);
+   setTimeout(errDone, EXIT_DELAY);
 }
 
 var newWorkingDirDelete = function()
@@ -936,7 +933,7 @@ var etcInstall = function(callback)
    setTimeout( function () {
       log.debug('copying ' + ETC_CONFIG_DIR + ' to ' + ETC_DIR);
       copyDirCmd(ETC_CONFIG_DIR + '.', ETC_DIR, procOk, procOk, callback);
-   }, MGMT_TIMEOUT);
+   }, SYS_DELAY);
 }
 
 var selfLibInstall = function(callback)
@@ -944,7 +941,7 @@ var selfLibInstall = function(callback)
    setTimeout( function () {
       log.debug('copying ' + SELF_LIB_DIR + ' to ' + LOC_LIB_DIR);
       copyDirCmd(SELF_LIB_DIR + '.', LOC_LIB_DIR, procOk, procOk, callback);
-   }, MGMT_TIMEOUT);
+   }, SYS_DELAY);
 }
 
 var firewallStop = function(callback)
@@ -952,7 +949,7 @@ var firewallStop = function(callback)
    setTimeout( function () {
       log.debug('disabling system firewall');
       iptablesCmd( '-F', callback, callback);
-   }, MGMT_TIMEOUT);
+   }, SYS_DELAY);
 }
 
 var sysInstall = function(callback)
@@ -960,7 +957,7 @@ var sysInstall = function(callback)
    setTimeout( function () {
       log.debug('updating system software modules ');
       runScript( SERVICES_CONFIG_FILE, procOk, procOk, callback);
-   }, MGMT_TIMEOUT);
+   }, SYS_DELAY);
 }
 
 var sysLibInstall = function(callback)
@@ -968,7 +965,7 @@ var sysLibInstall = function(callback)
    setTimeout( function () {
       log.debug('updating system library modules ');
       runScript( LIBRARIES_CONFIG_FILE, procOk, procOk, callback);
-   }, MGMT_TIMEOUT);
+   }, SYS_DELAY);
 }
 
 var thirdPartyLibInstall = function(callback)
@@ -976,7 +973,7 @@ var thirdPartyLibInstall = function(callback)
    setTimeout( function () {
       log.debug('copying ' + THIRDPARTY_LIB_DIR + ' to ' + LOC_LIB_DIR);
       copyDirCmd(THIRDPARTY_LIB_DIR + '.', LOC_LIB_DIR, procOk, procOk, callback);
-   }, MGMT_TIMEOUT);
+   }, SYS_DELAY);
 }
 
 var pkgInstall = function()
@@ -990,7 +987,7 @@ var pkgInstall = function()
 
       publishMessage(activeVersion + ' ' + upgradeVersion +
              ' ' + hwVersion + ': install failed');
-      setTimeout(procErr, EXIT_TIMEOUT);
+      setTimeout(procErr, EXIT_DELAY);
 
       return;
    }
