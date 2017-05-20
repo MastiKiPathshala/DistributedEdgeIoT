@@ -3,6 +3,7 @@
 ../../build/scripts/RELEASE_VERSION
 ../../pkg
 ../../src/node_modules
+../../src/securiot-upgrade
 ../../src/securiot-web
 ../../thirdparty/bin
 ../../thirdparty/pkg
