@@ -83,7 +83,8 @@ SECURIOT_MODULE_ALL   = 0x0F;
 //global Modules
 
 var routes      = require('./routes/index');
-var upgrade     = require('./routes/management');
+var config      = require('./routes/config');
+var upgrade     = require('./routes/upgrade');
 var statistics  = require('./routes/statistics');
 var diagnostics = require('./routes/diagnostics');
 
@@ -735,7 +736,7 @@ process.on('SIGHUP', function() {
 
    log.debug('SIGHUP received');
 
-   redisClient.get(WS_MODULE_UPGRADE_MSG, function(err, reply) {
+   redisClient.get(WEB_SVR_SVC_MSG, function(err, reply) {
 
       if (err) {
 
