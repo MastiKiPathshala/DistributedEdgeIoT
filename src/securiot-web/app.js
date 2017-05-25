@@ -26,8 +26,10 @@ WEB_SVR_SVC_PID  = WEB_SVR_SVC + '-pid';
 WEB_SVR_SVC_MSG  = WEB_SVR_SVC + '-upgrade-msg';
 
 
-BASE_DIR    = '/home/Kat@ppa/securiot-gateway';
-WORKING_DIR = BASE_DIR + '/src/';
+HOME_DIR     = '/home/Kat@ppa'
+BASE_MODULE  = 'securiot-gateway';
+BASE_DIR     = HOME_DIR + '/' + BASE_MODULE;
+WORKING_DIR  = BASE_DIR + '/src/';
 
 SECURIOT_CONF_FILE    = "/etc/securiot/securiot.conf";
 SECURIOT_HW_CONF_FILE = "/etc/securiot/securiot_hw.conf";
