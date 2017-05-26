@@ -87,8 +87,8 @@ SECURIOT_MODULE_ALL   = 0x0F;
 var routes      = require('./routes/index');
 var config      = require('./routes/config');
 var upgrade     = require('./routes/upgrade');
-var statistics  = require('./routes/statistics');
-var diagnostics = require('./routes/diagnostics');
+//var statistics  = require('./routes/statistics');
+//var diagnostics = require('./routes/diagnostics');
 
 var app = express();
 
@@ -96,6 +96,29 @@ var app = express();
 require('events').EventEmitter.prototype._maxListeners = 0;
 
 log.debug('start');
+
+/* Redis Client */
+redisClient = redis.createClient();
+
+redisClient.on("connect", function()
+{
+   appSetState();
+});
+
+redisClient.on("error", function(error) {
+
+   log.debug('redis disconnected (' + error + ')');
+   redisUp = false;
+});
+
+redisClient.on("message", function(channel, command)
+{
+   var arr = command.split(' ');
+
+   io.emit('queue', {status: arr[0], w_status: arr[1]});
+   
+   log.log('WEB SOCKET STATUS : '+arr[1]);
+});
 
 var hostName = os.hostname();
 
@@ -150,7 +173,7 @@ var appSetLogLevel = function(callback)
          logLevel = reply.toString();
       }
 
-      log.debug('log-level (' + log_level + ')');
+      log.debug('log-level (' + logLevel + ')');
 
       // set the log level
       log.setLevel(logLevel);
@@ -332,11 +355,11 @@ var setupPPPInterface = function()
 
    exec(cmd, function(err, stdout) {
 
-      var ifdata = stdout;
+      var ifData = stdout;
 
-      log.trace('ifconfig: ' + ifdata);
+      log.trace('ifconfig: ' + ifData);
 
-      if ((str1.indexOf("wwan0") > -1) && (ifdata.indexOf("ppp") < 0)) {
+      if ((ifData.indexOf("wwan0") > -1) && (ifData.indexOf("ppp") < 0)) {
 
          var cmd = "sudo wvdialconf";
 
@@ -472,7 +495,8 @@ var detectSetupUSBModem = function (callback)
             log.debug ("Detected USB device either not a Modem or already in Modem mode");
          }
 
-      usbIntfCheckTimer = setInterval(setupPPPInterface, USB_INTF_TIME);
+         usbIntfCheckTimer = setInterval(setupPPPInterface, USB_INTF_TIME);
+      }
    });
 
    callback();
@@ -648,8 +672,8 @@ var appSetHostName = function(cb)
    });
 }
 
-
-redisClient.on("connect", function() {
+var appSetState = function()
+{
 
    log.debug('redis connected');
 
@@ -702,12 +726,14 @@ redisClient.on("connect", function() {
          appGetEthmacAddr(callback);
       },  
 
+/*
       // check system status
       function(callback) {
 
          diagnostics.checkSystemStatus();
          callback();
       },
+*/
 
       // Detect and Setup USB Modem
       function(callback) {
@@ -721,17 +747,7 @@ redisClient.on("connect", function() {
          appSetHostName(callback);
       }
    ]);
-});
-
-redisClient.on("message", function(channel, command)
-{
-   var arr = command.split(' ');
-
-   io.emit('queue', {status: arr[0], w_status: arr[1]});
-   
-   log.log('WEB SOCKET STATUS : '+arr[1]);
-});
-
+}
 
 // catch SIGHUP events
 process.on('SIGHUP', function() {
@@ -799,9 +815,9 @@ app.use(function (req, res, next) {
 app.use('/', routes);
 app.use('/api/upgrade', upgrade);
 app.use('/api/config', config);
-app.use('/api/stats', statistics);
-app.use('/api/diag', diagnostics);
-app.use('/api/analytics/v1.0',analytics);
+//app.use('/api/stats', statistics);
+//app.use('/api/diag', diagnostics);
+//app.use('/api/analytics/v1.0',analytics);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {

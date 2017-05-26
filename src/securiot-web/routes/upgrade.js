@@ -4,7 +4,8 @@ var exec       = require ('child_process').exec;
 var spawn      = require ('child_process').spawn;
 var request    = require('request');
 var express    = require('express');
-var management = express.Router();
+
+var upgrade = express.Router();
 
 UPGRADE_SVC      = 'secureiot-upgrade';
 UPGRADE_SVC_PID  = UPGRADE_SVC + '-pid';

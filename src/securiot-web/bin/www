@@ -39,74 +39,17 @@ var moment = require('moment-timezone');
 
 redisUp = false;
 
-/* Redis Client */
-redisClient = redis.createClient();
-
-redisClient.on("connect", function()
-{
-   var now = moment();
-   var time_tz = now.tz("America/New_York").format('YYYY-MM-DDTHH:mm:ss.SSSZZ');
-
-   redisUp = true;
-
-   // store the process details in the redis db
-   redisClient.hmset(["ProcessDetails", WEB_SVR_SVC_NAME, 
-           JSON.stringify({pid:process.pid, startTime:time_tz})],
-           function (err, res) {
-              if (err) { log.error(err); }
-
-   });
-
-   redisClient.set(WEB_SVR_SVC_PID, process.pid, function(err, reply) {
-
-      if (err) {
-
-         log.debug('set pid failed');
-         setTimeout(process.exit(0), SYSTEM_DELAY);
-         return;
-      }
-
-      log.debug('daemon set pid :' + process.pid);
-   });
-
-   redisClient.hget("ProcessLogLevel", WEB_SVR_SVC_NAME, function(err, reply) {
-
-      if (err || !reply) {
-
-         log.error('log-level get fail(' + err + ')');
-         logLevel = 'debug';
-
-         redisClient.hmset("ProcessLogLevel", WEB_SVR_SVC_NAME, logLevel, function(err, reply) {
-
-            log.info('Redis: set log-level(' + logLevel + ')');
-         });
-      } else {
-         logLevel = reply.toString();
-      }
-
-      log.debug('Redis: get log-level(' + logLevel + ')');
-
-      // set the log level
-      log.setLevel(logLevel);
-   });
-});
-
-redisClient.on("error", function(error) {
-
-   log.debug('redis disconnected (' + error + ')');
-   redisUp = false;
-});
-
 /* environment port get and store in Express.  */
 
 var port = normalizePort(process.env.PORT || '80');
+
 app.set('port', port);
 
 
 /* Create WEB server */
 
 var server = http.createServer(app);
-var io = socketio.listen(server);
+io = sockio.listen(server);
 
 /* global io socket */
 
@@ -128,7 +71,7 @@ server.on('listening', onListening);
 
 /* port normalization => (a number, string, or false) */
 
-var normalizePort = function(val) 
+function normalizePort(val)
 {
    var port = parseInt(val, 10);
 
@@ -147,7 +90,7 @@ var normalizePort = function(val)
 
 /* on "error" event */
 
-var onError = function(error)
+function onError(error)
 {
    if (error.syscall != 'listen') {
       throw error;
@@ -176,11 +119,11 @@ var onError = function(error)
 
 /* Event listener */
 
-var onListening = function() {
-
+function onListening()
+{
    var addr = server.address();
    var bind = (typeof addr === 'string')
      ? ('pipe ' + addr) : ('port ' + addr.port);
 
-   log.debug(listening on (' + bind + ')');
+   log.debug('listening on (' + bind + ')');
 }

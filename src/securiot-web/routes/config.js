@@ -9,12 +9,11 @@ var setup        = require('setup')();
 var moment       = require('moment-timezone');
 var request      = require('request');
 var express      = require('express');
-var sensorObj    = require('./blesensor');
 var interfaces   = os.networkInterfaces();
 var childProcess = require('child_process');
 
 // router module
-var router = express.Router();
+var config = express.Router();
 
 BUILD_SVR    = 'build.mastikipathshala.com';
 BUILD_URL    = BUILD_SVR + '/' +  BASE_MODULE + '/';
@@ -68,7 +67,7 @@ config.get('/api/config/ipAddr',function(req, res, next)
 
    log.debug(' ip address get request');
 
-   ivar interfaces = os.networkInterfaces();
+   var interfaces = os.networkInterfaces();
 
    for (var idx in interfaces) {
 
@@ -341,9 +340,8 @@ config.post('/api/config/hostName', function(req, res, next) {
 
 })
 
-router.post('/api/config/LatestSwVersion', function(req, res,err)
+config.post('/api/config/LatestSwVersion', function(req, res,err)
 {
-   vr child;
    var locDir = BASE_DIR;
 
    log.debug(' hardware version(' + hwVersion.toString() + ')');
@@ -351,7 +349,7 @@ router.post('/api/config/LatestSwVersion', function(req, res,err)
    // delete all files named as version
    var cmd = 'rm -rf ' + BASE_DIR + '/latest*';
 
-   child = exec(cmd, function (error, stdout, stderr) {
+   var child = exec(cmd, function (error, stdout, stderr) {
       if (error === null) {
          io.emit('swVersion', {action:'latestSwVersion', status:'deleting'});
       }
@@ -402,7 +400,7 @@ router.post('/api/config/LatestSwVersion', function(req, res,err)
 });
 
 
-router.get('/api/config/hostName', function(req, res, next) {
+config.get('/api/config/hostName', function(req, res, next) {
 
    exec('hostname', function(err, stdout, stderr) {
 
