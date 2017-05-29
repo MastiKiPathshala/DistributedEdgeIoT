@@ -14,7 +14,6 @@ var favicon      = require('serve-favicon');
 var usbDetect    = require ('usb-detection');
 var bodyParser   = require('body-parser');
 var cookieParser = require('cookie-parser');
-var childProcess = require('child_process');
 
 var usbIntfCheckTimer;
 var usbDetectCounter = 0;
@@ -378,7 +377,7 @@ var setupPPPInterface = function()
          });
       } else {
 
-         log.debug( " wwan0 not found, retry count: " + usbDetectCounter);
+         log.trace(' wwan0 not found, retry count: ' + usbDetectCounter);
 
          if (usbDetectCounter >= 10) {
 

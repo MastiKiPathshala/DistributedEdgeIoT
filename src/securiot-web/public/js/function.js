@@ -1,62 +1,56 @@
 //Globals
-var user          = {};
-var sensor        = {};
-var company       = {};
-var locations       = {};
-
-var uluru, map, marker;
-
-var userBaseUrl   = '';
-var loginBaseUrl  = '';
-
-var zoneArr   = [];
-var selectIds = [];
+var user      = {};
+var locations = {};
 
 var getDeviceName = function(cb)
 {
+   var get_url = '/api/config/devName';
    $.ajax({
 
       method: "GET",
-      url: '/api/mgmt/deviceName'
+      url: get_url
    }).done(function(data) {
 
+      console.log('devName:');
       console.log(data);
-      cb(data.deviceName);
+      cb(data.devName);
 
    }).fail(function(data) {
 
       console.log(data);
+      cb();
    });
 }
 
-//Init function of login page
-var loginInit = function()
+var validateDeviceInfo = function()
 {
    getDeviceName(function(devName) {
 
       console.log('Device Id: ' + devName);
 
-      if (devName == "DHB-ABCDEFGHIJ-YY-XXXXX") {
+      // if (devName != "SIOT-ABCDEFGHIJ-YY-XXXXX")
+      if (devName === undefined) {
 
          var devName = prompt('Please enter device name: ', 'SIOT-');
 
          if (devName == null) {
-            window.location.reload();
 
+            window.location.reload();
          } else if (devName.search(/SIOT[-/]\c{10}[-/]\d{2}[-/]\d{5}$/) >= 0) {
 
+            var post_url = '/api/config/devName';
             //send to server
             $.ajax({
 
                method: "POST",
-               url: '/api/mgmt/deviceName',
-               data: {'deviceName' : devName}
+               url: post_url,
+               data: {'devName': devName}
             }).done(function() {
 
-               window.location.reload()
+               window.location.reload();
             }).fail(function() {
 
-               window.location.reload()
+               window.location.reload();
             });
 
          } else {
@@ -64,9 +58,14 @@ var loginInit = function()
          }
       }
    });
+}
 
+//Init function of login page
+var loginInit = function()
+{
+   // validateDeviceInfo(); TBD-XXX
 
-   userDoc = window.localStorage.getItem('user');
+   var userDoc = window.localStorage.getItem('user');
 
    if (userDoc === null) {
 
@@ -74,7 +73,7 @@ var loginInit = function()
       window.location.href = "index.html";
 
    } else {
-      login = login('dashboard.html');
+      login('dashboard.html');
    }
 }
 
@@ -92,16 +91,16 @@ var login = function(destination)
       userName = $("#username").val();
       passWord = $("#password").val();
    }
-	
-	
+
+
    var loginData = {user: userName, password: passWord};
-        
+   var post_url = '/api/config/login';
 
    //Perform User Fetch
    $.ajax({
 
-      type: "POST",
-      url: '/api/mgmt/login'
+      type: 'POST',
+      url: post_url,
       contentType: 'application/json',
       dataType: 'json',
       data: JSON.stringify(loginData)
@@ -115,12 +114,12 @@ var login = function(destination)
 
 var loginHandler = function(userName, passWord, destination)
 {
-   var get_url = '/api/mgmt/login/' + userName;
+   var get_url = '/api/config/login/' + userName;
 
    $.ajax({
 
       method: 'GET',
-      url: 'get_url
+      url: get_url
    }).done(function(data) {
 
       console.log(data)
@@ -141,22 +140,23 @@ var loginHandler = function(userName, passWord, destination)
       //store user data in local storage
       window.localStorage.setItem('user', JSON.stringify(userDoc));
 
-      get_url = /api/mgmt/location/';
+      get_url = '/api/config/location/';
 
       $.ajax({
 
          method: 'GET',
-         url: get_url
+         url: get_url,
       }).done(function(locationData) {
 
          console.log(locationData);
-       
+
          window.localStorage.setItem('location', JSON.stringify(locationData));
-       
+
+         var post_url = '/api/config/refresh';
          $.ajax({
-       
+
             method: 'POST',
-            url: '/api/mgmt/refresh'
+            url: post_url
          }).done(function(data) {
 
             if (data.success) {
@@ -192,10 +192,11 @@ var showUser = function()
    if (loc) {
 
       var locString = loc.city + ',' + loc.state + ',' + loc.country;
+      var get_url = 'http://maps.google.com/maps/api/geocode/json?address=' + locString + '&sensor=false';
 
       $.ajax({
          method: 'GET',
-         url: 'http://maps.google.com/maps/api/geocode/json?address=' + locString + '&sensor=false'
+         url: get_url
       }).done(function(data) {
 
          // take some default, to start with
@@ -205,21 +206,23 @@ var showUser = function()
             pos = { lat: data.results[0].geometry.loc.lat, lng: data.results[0].geometry.loc.lng };
          }
 
-         map map = new google.maps.Map(document.getElementById('map'), { zoom: 5, center: pos});
+         var map = new google.maps.Map(document.getElementById('map'), { zoom: 5, center: pos});
 
-         marker = new google.maps.Marker({ position: pos, map: map });
+         var marker = new google.maps.Marker({ position: pos, map: map });
       });
    }
 }
 
 var getLatestSwVersion = function()
 {
+   var get_url = 'api/config/latestSwVersionId'
+
    document.getElementById("swVersionBtn").style.display = 'none';
 
    $.ajax({
 
       method: 'POST',
-      url: '/api/mgmt/latestSwVersionId'
+      url: get_url
    }).done(function(data) {
 
       $('#latestSwVersionId').text(data.latestSwVersionId);
@@ -254,7 +257,7 @@ var hostNameUpdate = function()
    $.ajax({
 
        method: 'POST',
-       url: '/api/mgmt/hostName',
+       url: 'api/config/hostName',
        data: { hostname: $('#hostName').val() }
    }).done(function(data) {
 
@@ -272,6 +275,7 @@ var hostNameUpdate = function()
 
 var softwareUpgradeConfirm = function()
 {
+   var get_url = '/api/upgrade/';
    var upgradeSwVersionId = $('#upgradeSwVersionId').val();
 
    console.log('upgrade to ' + upgradeSwVersionId);
@@ -281,8 +285,7 @@ var softwareUpgradeConfirm = function()
    $.ajax({
 
       method:'GET',
-      url:'/api/mgmt/upgrade/status'
-
+      url:get_url
    }).done(function(data) {
 
       if (data.success != 0) {
@@ -292,9 +295,11 @@ var softwareUpgradeConfirm = function()
 
       $("#softwareUpgradeBtn").text('upgrading...');
 
+      var post_url = '/api/upgrade/' + upgradeSwVersionId;
+
       $.ajax({
          method: 'POST',
-         url: '/api/mgmt/upgrade/' + upgradeSwVersionId
+         url: post_url
       }).done(function() {
 
          console.log(upgradeSwVersionId + ' software upgrade done!');;
@@ -315,10 +320,11 @@ var softwareUpgradeConfirm = function()
 // restart the datahub services
 var softwareRestartConfirm = function()
 {
+   var post_url = '/api/config/serviceRestart';
    $.ajax({
 
       method: 'POST',
-      url: '/api/mgmt/softwareRestart/'
+      url: post_url
    }).done(function(data) {
 
       if (!data.success) {
@@ -343,10 +349,12 @@ var softwareRestartConfirm = function()
 
 var hardwareRestartConfirm = function()
 {
+   var post_url = '/api/config/hardwareRestart';
+
    $.ajax({
 
        method: 'POST',
-       url: '/api/mgmt/hardwareRestart/',
+       url: post_url
    }).done(function() {
 
       console.log("system restart done!");
@@ -361,54 +369,61 @@ var hardwareRestartConfirm = function()
 
 var updateInit = function()
 {
+   var get_url = '/api/config/swVersionId';
    var hwInfo;
    var swInfo;
 
    $.ajax({
       method: 'GET',
-      url: '/api/mgmt/swVersionId'
+      url: get_url
    }).done(function(data) {
       $("#swVersionId").text(data.swVersionId);
    });
 
+   var get_url = '/api/config/hwVersionId';
    $.ajax({
       method: 'GET',
-      url: '/api/mgmt/hwVersionId'
+      url: get_url
    }).done(function(data) {
       $("#hwVersionId1").text(data.hwVersionId);
    });
 
+   var get_url = '/api/config/hwDesc';
    $.ajax({
       method: 'GET',
-      url: '/api/mgmt/hwDesc'
+      url: get_url
    }).done(function(data) {
       $("#hwDescription").text(data.hWDesc);
    });
 
+   var get_url = '/api/config/kernelVersion';
    $.ajax({
        method: 'GET',
-       url: '/api/mgmt/kernelVersion'
+       url: get_url
    }).done(function(data) {
        $("#kernelVersion").text(data.kernelVersion);
    });
 
+   var get_url = '/api/config/fwVersion';
    $.ajax({
       method: 'GET',
-      url: '/api/mgmt/firmwareVersion'
+      url: get_url
    }).done(function(data) {
-      $("#firmwareVersion").text(data.firmwareVersion);
+      $("#firmwareVersion").text(data.fwVersion);
    });
 
+   var get_url = '/api/config/wlanMacAddr';
    $.ajax({
       method: 'GET',
-      url: '/api/mgmt/wlanMacAddr'
+      url: get_url
    }).done(function(data) {
       $("#wlanMacAddr").text(data.wlanMacAddr);
    });
 
+   var get_url = '/api/config/ethMacAddr';
    $.ajax({
       method: 'GET',
-      url: '/api/mgmt/ethMacAddr'
+      url: get_url
    }).done(function(data) {
       $("#ethMacAddr").text(data.ethMacAddr);
    });
@@ -427,10 +442,12 @@ var updateInit = function()
             </div></div>";
    $("#swInfo").append(swInfo);
 
+   var get_url = '/api/upgrade/';
+
    $.ajax({
 
       method:'GET',
-      url:'/api/mgmt/upgrade/status'
+      url:get_url
    }).done(function(data){
 
       if (data.success) {
@@ -468,12 +485,13 @@ var updateInit = function()
 
 var setLogLevel = function (logSettings)
 {
+   var post_url = '/api/config/logLevel';
+
    $.ajax({
 
       method:'POST',
-      url:'/api/mgmt/loglevel',
+      url:post_url,
       data:{level:$('#logLevel_' + which).val(), which: logSettings}
-
    }).done(function() {
 
       alert('done');

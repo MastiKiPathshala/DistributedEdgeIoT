@@ -44,11 +44,11 @@ config.post('/api/config/reboot', function(req, res, next)
 {
    if (upgrade_state != 0) {
 
-      res.json({success: 'false' });
+      res.json({success:'false'});
       return;
    }
 
-   res.json({success: 'true' });
+   res.json({success:'true'});
 
    exec('sudo reboot', function(err, stdout, stderr) {
 
@@ -138,7 +138,7 @@ config.get('/api/config/logLevel/:process',function(req, res, next)
 });
 
 //LOG LEVEL SET
-config.post('/api/config/loglevel',function(req, res, next)
+config.post('/api/config/logLevel',function(req, res, next)
 {
    var svcName  = req.body.svcName;
    var logLevel = req.body.logLevel;
@@ -181,13 +181,13 @@ config.get('/api/config/hwDesc', function(req, res, next) {
    res.json({success: true, hwDesc: hwDesc.toString()});
 });
 
-config.get('/api/config/hwSerial', function(req, res, next) {
-   res.json({success: true, hwSerial: hwSerial.toString()});
+config.get('/api/config/devName', function(req, res, next) {
+   res.json({success: true, devName: hwSerial.toString()});
 });
 
-config.post('/api/config/hwSerial',function(req,res,next) {
+config.post('/api/config/devName',function(req,res,next) {
 
-   var inHwSerial = req.body.hwSerial;
+   var inHwSerial = req.body.devName;
 
    log.info('set hw serial number to ' + inhwSerial);
 
@@ -221,7 +221,7 @@ config.post('/api/config/hwSerial',function(req,res,next) {
                } else {
 
                   hwSerial = inHwSerial;
-                  res.json({success: true, hwSerial: hwSerial.toString()});
+                  res.json({success: true, devName: hwSerial.toString()});
                }
             });
          });
@@ -320,7 +320,7 @@ config.post('/api/config/user', function(req, res, next)
    }
 })
 
-config.post('/api/config//refresh/', function(req, res, next) {
+config.post('/api/config/refresh/', function(req, res, next) {
    res.json({success: true});
 })
 
@@ -416,6 +416,7 @@ config.get('/api/config/hostName', function(req, res, next) {
 })
 
 // command functions
+
 var getHostName = function(hostName, res)
 {
    var currHostName = '';
