@@ -92,7 +92,6 @@ var login = function(destination)
       passWord = $("#password").val();
    }
 
-
    var loginData = {user: userName, password: passWord};
    var post_url = '/api/config/login';
 
@@ -106,7 +105,7 @@ var login = function(destination)
       data: JSON.stringify(loginData)
    }).done(function(data) {
 
-      console.log(data);
+      console.log('post-login-data: ' + data);
 
       loginHandler(userName, passWord, destination);
    });
@@ -122,7 +121,7 @@ var loginHandler = function(userName, passWord, destination)
       url: get_url
    }).done(function(data) {
 
-      console.log(data)
+      console.log('login-data:' + data)
 
       var userDoc = data;
       delete userDoc._rev;
@@ -146,13 +145,14 @@ var loginHandler = function(userName, passWord, destination)
 
          method: 'GET',
          url: get_url,
-      }).done(function(locationData) {
+      }).done(function(locData) {
 
-         console.log(locationData);
+         console.log('loc-data: ' + locData);
 
-         window.localStorage.setItem('location', JSON.stringify(locationData));
+         window.localStorage.setItem('location', JSON.stringify(locData));
 
          var post_url = '/api/config/refresh';
+
          $.ajax({
 
             method: 'POST',
