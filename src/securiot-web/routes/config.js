@@ -20,7 +20,7 @@ BUILD_URL    = BUILD_SVR + '/' +  BASE_MODULE + '/';
 
 //RESTART
 
-config.post('/api/config/restart/', function(req, res, next)
+config.post('/estart/', function(req, res, next)
 {
    log.debug('restart!');
 
@@ -40,7 +40,7 @@ config.post('/api/config/restart/', function(req, res, next)
 });
 
 // REBOOT
-config.post('/api/config/reboot', function(req, res, next)
+config.post('/reboot', function(req, res, next)
 {
    if (upgrade_state != 0) {
 
@@ -61,7 +61,7 @@ config.post('/api/config/reboot', function(req, res, next)
 });
 
 //IP ADDRESS GET
-config.get('/api/config/ipAddr',function(req, res, next)
+config.get('/ipAddr',function(req, res, next)
 {
    var ipAddrs = [];
 
@@ -89,7 +89,7 @@ config.get('/api/config/ipAddr',function(req, res, next)
 });
 
 // GET EXTERNAL-IP
-config.get('/api/config/externIpAddr',function(req, res, next) {
+config.get('/externIpAddr',function(req, res, next) {
 
    log.debug(' get-external-ip');
 
@@ -110,7 +110,7 @@ config.get('/api/config/externIpAddr',function(req, res, next) {
 });
 
 //LOG LEVEL GET
-config.get('/api/config/logLevel/:process',function(req, res, next)
+config.get('/logLevel/:process',function(req, res, next)
 {
    var svcName = req.params.svcName;
 
@@ -138,7 +138,7 @@ config.get('/api/config/logLevel/:process',function(req, res, next)
 });
 
 //LOG LEVEL SET
-config.post('/api/config/logLevel',function(req, res, next)
+config.post('/logLevel',function(req, res, next)
 {
    var svcName  = req.body.svcName;
    var logLevel = req.body.logLevel;
@@ -169,23 +169,23 @@ config.post('/api/config/logLevel',function(req, res, next)
 });
 
 
-config.get('/api/config/swVersion', function(req, res, next) {
+config.get('/swVersion', function(req, res, next) {
    res.json({success: true, swVersion: activeVersion.toString()});
 });
 
-config.get('/api/config/hwVersion', function(req, res, next) {
+config.get('/hwVersion', function(req, res, next) {
    res.json({success: true, hwVersion: hwVersion.toString()});
 });
 
-config.get('/api/config/hwDesc', function(req, res, next) {
+config.get('/hwDesc', function(req, res, next) {
    res.json({success: true, hwDesc: hwDesc.toString()});
 });
 
-config.get('/api/config/devName', function(req, res, next) {
+config.get('/devName', function(req, res, next) {
    res.json({success: true, devName: hwSerial.toString()});
 });
 
-config.post('/api/config/devName',function(req,res,next) {
+config.post('/devName',function(req,res,next) {
 
    var inHwSerial = req.body.devName;
 
@@ -229,23 +229,23 @@ config.post('/api/config/devName',function(req,res,next) {
    });
 });
 
-config.get('/api/config/kernelVersion', function(req, res, next) {
+config.get('/kernelVersion', function(req, res, next) {
    res.json({success: true, kernelVersion: kernelVersion.toString()});
 });
 
-config.get('/api/config/fwVersion', function(req, res, next) {
+config.get('/fwVersion', function(req, res, next) {
    res.json({success: true, fwVersion: fwVersion.toString()});
 });
 
-config.get('/api/config/wlanMacAddr', function(req, res, next) {
+config.get('/wlanMacAddr', function(req, res, next) {
    res.json({success: true, wlanMacAddr: wlanMacAddr.toString()});
 });
 
-config.get('/api/config/ethMacAddr', function(req, res, next) {
+config.get('/ethMacAddr', function(req, res, next) {
    res.json({success: true, ethMacAddr: ethMacAddr.toString()});
 });
 
-config.get('/api/config/user', function(req, res, next)
+config.get('/user', function(req, res, next)
 {
    if (redisUp) {
 
@@ -264,24 +264,25 @@ config.get('/api/config/user', function(req, res, next)
    }
 })
 
-config.post('/api/config/user', function(req, res, next)
+config.post('/user', function(req, res, next)
 {
-   if ((typeof req.body.username === 'undefined') ||
+   log.debug(JSON.stringify(req.body));
 
-      (req.body.username === '')) {
+   if ((typeof req.body.userName === 'undefined') ||
+      (req.body.userName === '')) {
 
       log.debug(' invalid user name');
       res.json({success: false});
       return;
    }
 
-   if (user === req.body.username) {
+   if (user === req.body.userName) {
 
       log.debug(' same user(' +  user + ')');
    } else {
 
       log.debug(' old-user(' +  user +
-             '), new user(' + req.body.username + ')' );
+             '), new user(' + req.body.userName + ')' );
    }
 
    if (redisUp) {
@@ -299,15 +300,15 @@ config.post('/api/config/user', function(req, res, next)
 
             if (!err && reply) {
 
-               user = req.body.username;
-               password = req.body.password;
+               user = req.body.userName;
+               password = req.body.passWord;
 
                log.debug(' set user(' + req.body + ')');
 
             } else {
 
-               log.debug(' set user failed(' + req.body.username + ')');
-               log.warn(req.body.username + ': user config set fail');
+               log.debug(' set user failed(' + req.body.userName + ')');
+               log.warn(req.body.userName + ': user config set fail');
                res.json({success: false, msg: err});
             }
          }.bind({req:req, res:res}));
@@ -320,14 +321,14 @@ config.post('/api/config/user', function(req, res, next)
    }
 })
 
-config.post('/api/config/refresh/', function(req, res, next) {
+config.post('/refresh/', function(req, res, next) {
    res.json({success: true});
 })
 
 
-config.post('/api/config/hostName', function(req, res, next) {
+config.post('/hostName', function(req, res, next) {
 
-   var hostName  = req.body.hostName;
+   var hostName = req.body.hostName;
 
    hostName = hostName.replace(/ /g,'');
 
@@ -340,7 +341,7 @@ config.post('/api/config/hostName', function(req, res, next) {
 
 })
 
-config.post('/api/config/LatestSwVersion', function(req, res,err)
+config.post('/LatestSwVersion', function(req, res,err)
 {
    var locDir = BASE_DIR;
 
@@ -400,7 +401,7 @@ config.post('/api/config/LatestSwVersion', function(req, res,err)
 });
 
 
-config.get('/api/config/hostName', function(req, res, next) {
+config.get('/hostName', function(req, res, next) {
 
    exec('hostname', function(err, stdout, stderr) {
 

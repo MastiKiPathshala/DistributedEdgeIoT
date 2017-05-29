@@ -13,7 +13,7 @@ UPGRADE_SVC_NAME = UPGRADE_SVC + '-service';
 
 SYS_DELAY = 5000;
 
-upgrade.get('/api/upgrade/', function(req, res, next) {
+upgrade.get('/', function(req, res, next) {
 
    log.debug('get upgrade status: ' + upgradeState);
 
@@ -31,7 +31,7 @@ upgrade.get('/api/upgrade/', function(req, res, next) {
    res.json({success:false});
 })
 
-upgrade.post('/api/upgrade/:nextVersion', function(req, res, next) {
+upgrade.post('/:nextVersion', function(req, res, next) {
 
    var state = false;
    var upgradePid;

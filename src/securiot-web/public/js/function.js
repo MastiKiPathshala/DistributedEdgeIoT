@@ -85,15 +85,15 @@ var login = function(destination)
    if (!jQuery.isEmptyObject(user)) {
 
       userName = user._id;
-      passWord = user.password;
+      passWord = user.passWord;
    } else {
 
-      userName = $("#username").val();
-      passWord = $("#password").val();
+      userName = $("#userName").val();
+      passWord = $("#passWord").val();
    }
 
-   var loginData = {user: userName, password: passWord};
-   var post_url = '/api/config/login';
+   var loginData = {userName: userName, passWord: passWord};
+   var post_url = '/api/config/user';
 
    //Perform User Fetch
    $.ajax({
@@ -105,15 +105,20 @@ var login = function(destination)
       data: JSON.stringify(loginData)
    }).done(function(data) {
 
-      console.log('post-login-data: ' + data);
+      console.log('post-login-data: ' );
+      console.log(data);
 
-      loginHandler(userName, passWord, destination);
+      if (data.success === true) {
+         loginHandler(userName, passWord, destination);
+      } else {
+         window.location.reload();
+      }
    });
 }
 
 var loginHandler = function(userName, passWord, destination)
 {
-   var get_url = '/api/config/login/' + userName;
+   var get_url = '/api/config/user/';
 
    $.ajax({
 
