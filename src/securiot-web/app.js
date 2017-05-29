@@ -85,6 +85,7 @@ SECURIOT_MODULE_ALL   = 0x0F;
 
 var routes      = require('./routes/index');
 var config      = require('./routes/config');
+var system      = require('./routes/system');
 var upgrade     = require('./routes/upgrade');
 //var statistics  = require('./routes/statistics');
 //var diagnostics = require('./routes/diagnostics');
@@ -814,6 +815,7 @@ app.use(function (req, res, next) {
 app.use('/', routes);
 app.use('/api/upgrade', upgrade);
 app.use('/api/config', config);
+app.use('/api/system/v1.0', system);
 //app.use('/api/stats', statistics);
 //app.use('/api/diag', diagnostics);
 //app.use('/api/analytics/v1.0',analytics);

@@ -5,21 +5,30 @@ var http = require('http');
 var async = require('async');
 var iwlist = require('wireless-tools/iwlist');
 var udhcpc = require('wireless-tools/udhcpc');
+var express = require('express');
 var hostapd = require('wireless-tools/hostapd');
 var iwconfig = require('wireless-tools/iwconfig')
 var hostname = os.hostname();
 var ifconfig = require('wireless-tools/ifconfig');
 var redis = require('redis');
 
-//Lets define a port we want to listen to
-const AP_SERVICE_PORT = 80;
-
 // router module
 var system = express.Router();
+var id, svrId, isStatic;
+
+require('getmac').getMac(function(err, macAddress) {
+    if (err) {
+        id = "Zreyas_" + myuuid;
+    } else {
+        id = "Zreyas_" + macAddress;
+    }
+    redisClient.hmset("SystemDetails", 'parkingLotId', id);
+    redisClient.hmset("CloudDetails", 'mqttIpAddr', "128.199.173.29");
+    redisClient.hmset("CloudDetails", 'mqttPort', "1883");
+})
 
 
-system.get('/',express.static('www'))
-system.post('/api/system/v1.0', function(req, res) {
+system.post('/', function(req, res) {
 
    var body = req.body;
    
@@ -121,7 +130,7 @@ system.post('/api/system/v1.0', function(req, res) {
       break;
 
    case "ADD":
-      log.debug(" received l2 network request");
+      log.debug(" received l2 network add request");
    
       var data = body.data;
       var iface = body.iface;
@@ -160,10 +169,6 @@ system.post('/api/system/v1.0', function(req, res) {
    }
 });
 
-system.listen(AP_SERVICE_PORT);
-
-console.log('Listening on port '+ AP_SERVICE_PORT);
-
 var addStatic = function(iface, data, cb) {
     clearInterfaces(iface, 'static', function(err) {
 
@@ -182,6 +187,9 @@ var addStatic = function(iface, data, cb) {
 
 function addNetwork(iface, data, cb) {
    
+    log.debug(' iface : ' + iface);
+    log.debug(' is static : ' + isStatic);
+
     if (isStatic === true) {
    
         if (iface != "eth0") {
@@ -191,6 +199,8 @@ function addNetwork(iface, data, cb) {
                 var cb = this.cb;
                 var data = this.data;
                 var iface = this.iface;
+
+                log.debug('cleared network config: ' + err);
 
                 if (err) {
                     log.warn(' failed to clear networks(' + err + ')')
@@ -221,9 +231,12 @@ function addNetwork(iface, data, cb) {
       
                 clearNetworks(iface, function(err) {
           
+
                     var cb = this.cb;
                     var data = this.data;
                     var iface = this.iface;
+
+                    log.debug('cleared network config: ' + err);
           
                     if (!err) {
          
@@ -243,7 +256,7 @@ function wifiEnable(iface, data, cb) {
     // Loop and add each network entry
     for (var i in data) {
    
-        addnetworkid(iface, data[i].rasp_ssid_, data[i].wifiPass);
+        addNetworkId(iface, data[i].rasp_ssid_, data[i].wifiPass);
    
     }
 
@@ -252,6 +265,8 @@ function wifiEnable(iface, data, cb) {
 
 function clearNetworks(iface, cb) {
    
+    log.debug(' clearing network config : ' + iface);
+
     var cmd = "sudo cp /etc/wpa_supplicant/wpa_supplicant.default " +
         "/etc/wpa_supplicant/wpa_supplicant_" + iface + ".conf";
     exec(cmd, function(err, stdout, stdout) {
@@ -283,7 +298,7 @@ function addStaticNetworkId(iface, address, netmask, gateway, cb) {
     });
 }
 
-function addnetworkid(iface, id, pwd) {
+function addNetworkId(iface, id, pwd) {
 
     var iface_wpa_file = '/etc/wpa_supplicant/wpa_supplicant_';
 
