@@ -20,7 +20,7 @@ BUILD_URL    = BUILD_SVR + '/' +  BASE_MODULE + '/';
 
 //RESTART
 
-config.post('/estart/', function(req, res, next)
+config.post('/restart/', function(req, res, next)
 {
    log.debug('restart!');
 
@@ -169,12 +169,12 @@ config.post('/logLevel',function(req, res, next)
 });
 
 
-config.get('/swVersion', function(req, res, next) {
-   res.json({success: true, swVersion: activeVersion.toString()});
+config.get('/swVersionId', function(req, res, next) {
+   res.json({success: true, swVersionId: activeVersion.toString()});
 });
 
-config.get('/hwVersion', function(req, res, next) {
-   res.json({success: true, hwVersion: hwVersion.toString()});
+config.get('/hwVersionId', function(req, res, next) {
+   res.json({success: true, hwVersionId: hwVersion.toString()});
 });
 
 config.get('/hwDesc', function(req, res, next) {
@@ -279,6 +279,8 @@ config.post('/user', function(req, res, next)
    if (user === req.body.userName) {
 
       log.debug(' same user(' +  user + ')');
+      res.json({success: true});
+      return;
    } else {
 
       log.debug(' old-user(' +  user +
@@ -304,6 +306,7 @@ config.post('/user', function(req, res, next)
                password = req.body.passWord;
 
                log.debug(' set user(' + req.body + ')');
+               res.json({success: true});
 
             } else {
 
@@ -325,7 +328,6 @@ config.post('/refresh/', function(req, res, next) {
    res.json({success: true});
 })
 
-
 config.post('/hostName', function(req, res, next) {
 
    var hostName = req.body.hostName;
@@ -341,7 +343,7 @@ config.post('/hostName', function(req, res, next) {
 
 })
 
-config.post('/LatestSwVersion', function(req, res,err)
+config.get('/latestSwVersionId', function(req, res,err)
 {
    var locDir = BASE_DIR;
 
@@ -352,7 +354,7 @@ config.post('/LatestSwVersion', function(req, res,err)
 
    var child = exec(cmd, function (error, stdout, stderr) {
       if (error === null) {
-         io.emit('swVersion', {action:'latestSwVersion', status:'deleting'});
+         io.emit('swVersion', {action:'latestSwVersionId', status:'deleting'});
       }
    });
 
@@ -392,7 +394,7 @@ config.post('/LatestSwVersion', function(req, res,err)
             versionStr = swVersion + "," + timeStamp;
 
             log.debug('latest version: ' + versionStr);
-            res.json({success: true, latestSwVersion: versionStr.toString()});
+            res.json({success: true, latestSwVersionId: versionStr.toString()});
          }
       });
    });
@@ -412,6 +414,53 @@ config.get('/hostName', function(req, res, next) {
 
          log.debug(stdout);
          res.json({success:true, hostName: stdout});
+      }
+   });
+})
+
+config.get('/svrConfig', function(req, res, next) {
+
+   var locDir = BASE_DIR;
+
+   log.debug(' svr config get');
+
+   fs.readFile(locDir + '/svrConfig', function (err, data) {
+
+      if (!data || err) {
+
+         log.error(err);
+         res.json({success: false});
+      } else {
+
+         var buf = data.toString();
+
+         log.debug('server Config: ' + buf);
+         res.json({success: true, svrConfig: buf});
+      }
+   });
+
+})
+
+config.post('/svrConfig', function(req, res, next) {
+
+   var locDir = BASE_DIR;
+
+   var svrConfig = req.body.svrConfig;
+
+   log.debug(' svr config set');
+
+   // delete all files named as version
+
+   fs.writeFile(locDir + '/svrConfig', svrConfig, 'utf8', function (err) {
+
+      if (err) {
+
+         log.error(err);
+         res.json({success: false});
+      } else {
+
+         log.debug('server Config: ' + svrConfig);
+         res.json({success: true});
       }
    });
 })

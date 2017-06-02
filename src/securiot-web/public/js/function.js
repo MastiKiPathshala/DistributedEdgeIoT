@@ -149,13 +149,26 @@ var loginHandler = function(userName, passWord, destination)
       $.ajax({
 
          method: 'GET',
-         url: get_url,
+         url: get_url
       }).done(function(locData) {
 
          console.log('loc-data: ' + locData);
 
          window.localStorage.setItem('location', JSON.stringify(locData));
 
+         var post_url = '/api/config/refresh';
+
+         $.ajax({
+
+            method: 'POST',
+            url: post_url
+         }).done(function(data) {
+
+            if (data.success) {
+                window.location.href = destination;
+            }
+         });
+      }).fail(function(locData) {
          var post_url = '/api/config/refresh';
 
          $.ajax({
@@ -194,7 +207,7 @@ var showUser = function()
    }
 
    // get location
-   if (loc) {
+   if (loc && loc != undefined) {
 
       var locString = loc.city + ',' + loc.state + ',' + loc.country;
       var get_url = 'http://maps.google.com/maps/api/geocode/json?address=' + locString + '&sensor=false';
