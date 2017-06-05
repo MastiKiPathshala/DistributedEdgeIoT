@@ -18,19 +18,19 @@ var usbIntfCheckTimer;
 //var usbDetectCounter = 0;
 //USB_INTF_TIME = 1000;
 
-WEB_SVR_SVC      = 'securiot-web';
-WEB_SVR_SVC_NAME = WEB_SVR_SVC + '-service';
-WEB_SVR_SVC_PID  = WEB_SVR_SVC + '-pid';
-WEB_SVR_SVC_MSG  = WEB_SVR_SVC + '-upgrade-msg';
+BASE_MODULE  = 'securiot';
+HOST_HOME    = '/home/Kat@ppa';
 
+BASE_DIR     = HOST_HOME + '/' + BASE_MODULE + '-gateway/';
+WORKING_DIR  = BASE_DIR + 'src/';
 
-HOME_DIR     = '/home/Kat@ppa'
-BASE_MODULE  = 'securiot-gateway';
-BASE_DIR     = HOME_DIR + '/' + BASE_MODULE;
-WORKING_DIR  = BASE_DIR + '/src/';
+SVC_MODULE      = 'securiot-mgmt';
+SVC_MODULE_NAME = SVC_MODULE + '-service';
+SVC_MODULE_PID  = SVC_MODULE + '-pid';
+SVC_MODULE_MSG  = SVC_MODULE + '-upgrade-msg';
 
-SECURIOT_CONF_FILE    = "/etc/securiot/securiot.conf";
-SECURIOT_HW_CONF_FILE = "/etc/securiot/securiot_hw.conf";
+SECURIOT_CONF_FILE    = '/etc/' + BASE_MODULE + '/' + BASE_MODULE + '.conf';
+SECURIOT_HW_CONF_FILE = '/etc/' + BASE_MODULE + '/' + BASE_MODULE + '_hw.conf';
 SECURIOT_VERSION_FILE = BASE_DIR + 'build/scripts/RELEASE_VERSION';
 
 UPGRADE_VERSION_TAG = 'sysSwUpgradeVersion';
@@ -148,7 +148,7 @@ setTimeout(appMaintenanceRestart, SECURIOT_MAINTENANCE_TIMEOUT);
 
 var appSetLogLevel = function(callback)
 {
-   redisClient.hget("procLogLevel", WEB_SVR_SVC_NAME, function(err, reply) {
+   redisClient.hget("procLogLevel", SVC_MODULE_NAME, function(err, reply) {
     
       if (err || !reply) {
 
@@ -156,7 +156,7 @@ var appSetLogLevel = function(callback)
 
          logLevel = 'debug';
 
-         redisClient.hmset("procLogLevel", WEB_SVR_SVC_NAME, logLevel, function(err, reply) {
+         redisClient.hmset("procLogLevel", SVC_MODULE_NAME, logLevel, function(err, reply) {
           
             if (err) {
 
@@ -189,7 +189,7 @@ var appSetSelfPid = function(callback)
 
    // store the process details in the redis db
 
-   redisClient.hmset(["procDetails", WEB_SVR_SVC_NAME, 
+   redisClient.hmset(["procDetails", SVC_MODULE_NAME, 
       JSON.stringify({pid:process.pid, startTime:time_tz})],
       function (err, res) {
 
@@ -198,7 +198,7 @@ var appSetSelfPid = function(callback)
       }
    });
 
-   redisClient.set(WEB_SVR_SVC_PID, process.pid, function(err, reply) {
+   redisClient.set(SVC_MODULE_PID, process.pid, function(err, reply) {
     
       if (err) {
          log.debug('set pid failed');
@@ -524,7 +524,7 @@ var appGetSoftwareVersion = function(callback)
 
       log.debug('software version (' + activeVersion + ')');
    
-      redisClient.hmset("sysDetail",SOFTWARE_VERSION_TAG, activeVersion, function(err, reply) {
+      redisClient.hmset("sysDetail", SOFTWARE_VERSION_TAG, activeVersion, function(err, reply) {
       
          if (err) {
             log.error('software version set failed');
@@ -763,7 +763,7 @@ process.on('SIGHUP', function() {
 
    log.debug('SIGHUP received');
 
-   redisClient.get(WEB_SVR_SVC_MSG, function(err, reply) {
+   redisClient.get(SVC_MODULE_MSG, function(err, reply) {
 
       if (err) {
 

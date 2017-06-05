@@ -7,19 +7,22 @@ var exec  = require('child_process').exec;
 var spawn = require ('child_process').spawn;
 var redis = require('redis');
 
-UPGRADE_SVC      = 'secureiot-upgrade';
-UPGRADE_SVC_NAME = UPGRADE_SVC + '-service';
-HEALTH_SVC_NAME  = 'securiot-health-service';
+BASE_MODULE  = 'securiot';
+HOST_HOME    = '/home/Kat@ppa';
 
-WEB_SVR_SVC      = 'securiot-web';
-WEB_SVR_SVC_NAME = WEB_SVR_SVC + '-service';
-WEB_SVR_SVC_PID  = WEB_SVR_SVC + '-pid';
-WEB_SVR_SVC_MSG  = WEB_SVR_SVC + '-upgrade-msg';
+MGMT_SVC      = BASE_MODULE + '-mgmt';
+MGMT_SVC_NAME = MGMT_SVC + '-service';
+MGMT_SVC_PID  = MGMT_SVC + '-pid';
+MGMT_SVC_MSG  = MGMT_SVC + '-upgrade-msg';
 
-HOME_DIR    = '/home/Kat@ppa';
-BASE_DIR    = HOME_DIR + '/securiot-gateway/';
-WORKING_DIR = BASE_DIR + '/';
+SVC_MODULE      = BASE_MODULE + '-upgrade';
+SVC_MODULE_NAME = SVC_MODULE + '-service';
+SVC_MODULE_PID  = SVC_MODULE + '-pid';
+SVC_MODULE_MSG  = MGMT_SVC + '-msg';
 
+BASE_DIR    = HOST_HOME + '/' + BASE_MODULE + '-gateway/';
+BKUP_DIR    = HOST_HOME + '/' + BASE_MODULE + '-gateway.bkup/';
+WORKING_DIR = BASE_DIR;
 SYS_DELAY = 5000;
 
 var activeVersion;
@@ -36,13 +39,11 @@ log.methodFactory = function (methodName, logLevel, loggerName) {
 
    return function (message) {
 
-      rawMethod('['+ new Date() + ']' + UPGRADE_SVC_NAME + ': ' + message);
+      rawMethod('['+ new Date() + ']' + SVC_MODULE_NAME + ': ' + message);
    };
 };
 
 // set log level as debug
-log.setLevel('debug');
-
 log.setLevel('debug');
 
 //Create Redis Client
@@ -87,7 +88,7 @@ var pushSighup = function (pid)
 var writeMessage = function(pid, message)
 {
 
-   redisClient.set(WEB_SVR_SVC_MSG, message,
+   redisClient.set(MGMT_SVC_MSG, message,
 
       function(err, reply) {
 
@@ -105,7 +106,7 @@ var writeMessage = function(pid, message)
 /* write the message to redis database */
 var publishMessage = function(message)
 {
-   redisClient.get(WEB_SVR_SVC_PID,
+   redisClient.get(MGMT_SVC_PID,
 
       function(err, reply) {
 
@@ -274,13 +275,13 @@ var pkgRestart = function()
 
    default:
    case 'serviceRestart':
-      serviceRestart(WEB_SVR_SVC_NAME);
-      serviceRestart(UPGRADE_SVC_NAME);
+      serviceRestart(MGMT_SVC_NAME);
       serviceRestart(HEALTH_SVC_NAME);
+      serviceRestart(SVC_MODULE_NAME);
       break;
 
    // this will be called in the context of the install.js file, of the new package
-   case 'reboot_system':
+   case 'systemRestart':
       log.debug('executing system reboot...');
       setTimeout(rebootCmd, SYS_DELAY);
       break;

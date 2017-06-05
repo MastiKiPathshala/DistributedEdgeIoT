@@ -16,24 +16,22 @@ var moment = require('moment-timezone');
 
 var installSuccess = false;
 
-UPGRADE_SVC      = 'secureiot-upgrade';
-UPGRADE_SVC_NAME = UPGRADE_SVC + '-service';
+BASE_MODULE  = 'securiot';
+HOST_HOME    = '/home/Kat@ppa';
 
-WEB_SVR_SVC      = 'securiot-web';
-WEB_SVR_SVC_NAME = WEB_SVR_SVC + '-service';
-WEB_SVR_SVC_PID  = WEB_SVR_SVC + '-pid';
-WEB_SVR_SVC_MSG  = WEB_SVR_SVC + '-upgrade-msg';
+MGMT_SVC      = BASE_MODULE + '-mgmt';
+MGMT_SVC_NAME = MGMT_SVC + '-service';
+MGMT_SVC_PID  = MGMT_SVC + '-pid';
+MGMT_SVC_MSG  = MGMT_SVC + '-upgrade-msg';
 
-HOME_DIR    = '/home/Kat@ppa';
-BASE_DIR    = HOME_DIR + '/securiot-gateway/';
-BKUP_DIR    = HOME_DIR + '/secoriot-gateway.bkup/';
-WORKING_DIR = BASE_DIR + '/';
+SVC_MODULE      = BASE_MODULE + '-upgrade';
+SVC_MODULE_NAME = SVC_MODULE + '-service';
+SVC_MODULE_PID  = SVC_MODULE + '-pid';
+SVC_MODULE_MSG  = MGMT_SVC + '-msg';
 
-KERNEL_CONFIG_FILE      = '/boot/config.txt';
-NEW_KERNEL_CONFIG_FILE  = WORKING_DIR + 'src/kernel/config.txt';
-
-KERNEL_CMDLINE_FILE     = '/boot/cmdline.txt';
-NEW_KERNEL_CMDLINE_FILE = WORKING_DIR + 'src/kernel/cmdline.txt';
+BASE_DIR    = HOST_HOME + '/' + BASE_MODULE + '-gateway/';
+BKUP_DIR    = HOST_HOME + '/' + BASE_MODULE + '-gateway.bkup/';
+WORKING_DIR = BASE_DIR;
 
 KERNEL_FILE     = '/boot/kernel7.img';
 NEW_KERNEL_FILE = WORKING_DIR + 'src/kernel/kernel7.img';
@@ -44,6 +42,12 @@ LIBRARIES_CONFIG_FILE = WORKING_DIR + 'build/scripts/libraryUpgrade';
 INTERFACE_CONFIG_FILE = '/etc/network/interfaces';
 INTERFACE_APPEND_FILE = WORKING_DIR + 'build/scripts/interfaceConfig';
 
+KERNEL_CONFIG_FILE      = '/boot/config.txt';
+NEW_KERNEL_CONFIG_FILE  = WORKING_DIR + 'src/kernel/config.txt';
+
+KERNEL_CMDLINE_FILE     = '/boot/cmdline.txt';
+NEW_KERNEL_CMDLINE_FILE = WORKING_DIR + 'src/kernel/cmdline.txt';
+
 ETC_DIR        = '/etc';
 ETC_CONFIG_DIR = WORKING_DIR + 'tools/sysconfig/';
 
@@ -51,10 +55,10 @@ LOC_LIB_DIR        = '/user/local/lib';
 SELF_LIB_DIR       = WORKING_DIR + 'src/lib/';
 THIRDPARTY_LIB_DIR = WORKING_DIR + 'thirdparty/lib/';
 
-CURR_BACKUP_DIR = BACKUP_DIR;
-NEW_WORKING_DIR = BACKUP_DIR;
+CURR_BKUP_DIR   = BKUP_DIR;
+NEW_WORKING_DIR = BKUP_DIR;
 
-SYS_DELAY = 5000;
+SYS_DELAY  = 5000;
 EXIT_DELAY = 10000;
 
 var fileUrl;
@@ -62,8 +66,6 @@ var fileName;
 var swVersion;
 var filePath;
 
-var activeVersion;
-var upgradeVersion;
 var activeVersion;
 var upgradeVersion;
 var hwVersion;
@@ -80,7 +82,7 @@ log.methodFactory = function (methodName, logLevel, loggerName) {
 
    return function (message) {
 
-      rawMethod('['+ new Date() + ']' + UPGRADE_SVC_NAME + ': ' + message);
+      rawMethod('['+ new Date() + ']' + SVC_MODULE_NAME + ': ' + message);
    };
 };
 
@@ -131,7 +133,7 @@ var pushSighup = function (pid)
 var writeMessage = function(pid, message)
 {
 
-   redisClient.set(WEB_SVR_SVC_MSG, message,
+   redisClient.set(MGMT_SVC_MSG, message,
 
       function(err, reply) {
 
@@ -149,7 +151,7 @@ var writeMessage = function(pid, message)
 /* write the message to redis database */
 var publishMessage = function(message)
 {
-   redisClient.get(WEB_SVR_SVC_PID,
+   redisClient.get(MGMT_SVC_PID,
 
       function(err, reply) {
 
@@ -627,15 +629,15 @@ var webSvcInstallErr = function()
 
 var webSvcRestart = function()
 {
-   log.debug('restart service ' + WEB_SVR_SVC);
+   log.debug('restart service ' + MGMT_SVC);
 
    // restart the service
-   serviceCmd(WEB_SVR_SVC, 'restart', procDone, procDone);
+   serviceCmd(MGMT_SVC, 'restart', procDone, procDone);
 }
 
 var otherSvcsRestart = function(callback)
 {
-   log.debug('restart service ' + WEB_SVR_SVC);
+   log.debug('restart service ' + MGMT_SVC);
 
    // restart the service
    serviceCmd('securiot-gpio', 'restart', callback, callback);
@@ -643,10 +645,10 @@ var otherSvcsRestart = function(callback)
 
 var webSvcStart = function()
 {
-   log.debug('start service ' + WEB_SVR_SVC);
+   log.debug('start service ' + MGMT_SVC);
 
    // start the service
-   serviceCmd(WEB_SVR_SVC, 'start', procDone, procDone);
+   serviceCmd(MGMT_SVC, 'start', procDone, procDone);
 }
 
 var diagSvcStop = function()
@@ -668,21 +670,21 @@ var newWorkingDirMove = function()
 
 var workingDirMove = function()
 {
-   log.debug('move ' + WORKING_DIR + ' ' + CURR_BACKUP_DIR);
+   log.debug('move ' + WORKING_DIR + ' ' + CURR_BKUP_DIR);
 
    // now the tricky work, backup the working version
-   cmd_move(WORKING_DIR, CURR_BACKUP_DIR, newWorkingDirMove,
+   cmd_move(WORKING_DIR, CURR_BKUP_DIR, newWorkingDirMove,
       newWorkingDirMove);
 }
 
 var webSvcStop = function()
 {
-   log.debug('stop service ' + WEB_SVR_SVC);
+   log.debug('stop service ' + MGMT_SVC);
 
    publishMessage('gateway installation complete');
 
    // now the tricky work, move the new version to working
-   serviceCmd(WS_MODULE, 'stop', workingDirMove, workingDirMove);
+   serviceCmd(MGMT_SVC_NAME, 'stop', workingDirMove, workingDirMove);
 }
 
 var webSvcPkgDelete = function()
@@ -1005,13 +1007,13 @@ var pkgInstall = function()
 
       // get the package file name, proper
       fileName = 'v' + upgradeVersion + '.tar.gz';
-      filePath = BACKUP_DIR + fileName;
+      filePath = BKUP_DIR + fileName;
 
       // bkup working version, here
-      CURR_BACKUP_DIR = BACKUP_DIR + 'v' + activeVersion;
+      CURR_BKUP_DIR = BKUP_DIR + 'v' + activeVersion;
 
       // the new working dir
-      NEW_WORKING_DIR = BACKUP_DIR + 'v'+ upgradeVersion;
+      NEW_WORKING_DIR = BKUP_DIR + 'v'+ upgradeVersion;
 
       log.debug('installing ' + upgradeVersion + ': ' + fileName + ' in ' + hwVersion);
 

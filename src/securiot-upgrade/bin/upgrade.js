@@ -22,17 +22,20 @@ var redisUp    = false;
 var runType    = 'installStart';
 var rebootFlag = false;
 
-WEB_SVR_SVC      = 'securiot-web';
-WEB_SVR_SVC_NAME = WEB_SVR_SVC + '-service';
-WEB_SVR_SVC_PID  = WEB_SVR_SVC + '-pid';
-WEB_SVR_SVC_MSG  = WEB_SVR_SVC + '-upgrade-msg';
+BASE_MODULE  = 'securiot';
+HOST_HOME    = '/home/Kat@ppa';
 
-UPGRADE_SVC      = 'secureiot-upgrade';
-UPGRADE_SVC_NAME = UPGRADE_SVC + '-service';
-UPGRADE_SVC_PID  = UPGRADE_SVC + '-pid';
-UPGRADE_SVC_MSG  = WEB_SVR_SVC + '-msg';
+MGMT_SVC      = BASE_MODULE + '-mgmt';
+MGMT_SVC_NAME = MGMT_SVC + '-service';
+MGMT_SVC_PID  = MGMT_SVC + '-pid';
+MGMT_SVC_MSG  = MGMT_SVC + '-upgrade-msg';
 
-BASE_DIR = '/home/Kat@ppa/securiot-gateway';
+SVC_MODULE      = BASE_MODULE + '-upgrade';
+SVC_MODULE_NAME = SVC_MODULE + '-service';
+SVC_MODULE_PID  = SVC_MODULE + '-pid';
+SVC_MODULE_MSG  = MGMT_SVC + '-msg';
+
+BASE_DIR = HOST_HOME + '/' + BASE_MODULE + '-gateway';
 WORKING_DIR = BASE_DIR + '/src/';
 
 SYSTEM_DELAY = 5000;
@@ -40,11 +43,11 @@ SYSTEM_DELAY = 5000;
 SECUREIOT_DEFAULT_HARDWARE_VERSION = "RPi3";
 SECUREIOT_DEFAULT_HARDWARE_DESCRIPTION = "Raspberry Pi 3 Model B";
 
-var CLEANUP_SCRIPT  = WORKING_DIR + UPGRADE_SVC + '/routes/cleanup.js'
-var INSTALL_SCRIPT  = WORKING_DIR + UPGRADE_SVC + '/routes/install.js'
-var RESTART_SCRIPT  = WORKING_DIR + UPGRADE_SVC + '/routes/restart.js'
-var ROLLBACK_SCRIPT = WORKING_DIR + UPGRADE_SVC + '/routes/rollback.js'
-var UPGRADE_SCRIPT  = WORKING_DIR + UPGRADE_SVC + 'routes/upgrade.js'
+var CLEANUP_SCRIPT  = WORKING_DIR + SVC_MODULE + '/routes/cleanup.js'
+var INSTALL_SCRIPT  = WORKING_DIR + SVC_MODULE + '/routes/install.js'
+var RESTART_SCRIPT  = WORKING_DIR + SVC_MODULE + '/routes/restart.js'
+var ROLLBACK_SCRIPT = WORKING_DIR + SVC_MODULE + '/routes/rollback.js'
+var UPGRADE_SCRIPT  = WORKING_DIR + SVC_MODULE + 'routes/upgrade.js'
 
 
 log = require('loglevel');
@@ -59,14 +62,14 @@ log.methodFactory = function (methodName, logLevel, loggerName) {
 
    return function (message) {
 
-      rawMethod('['+ new Date() + ']' + UPGRADE_SVC_NAME + ': ' + message);
+      rawMethod('['+ new Date() + ']' + SVC_MODULE_NAME + ': ' + message);
    };
 };
 
 /* trace levels ("trace" ,"debug","info","warn","error") in increase order */
 log.setLevel('debug');
 
-var debug = require('debug')(UPGRADE_SVC + ':server');
+var debug = require('debug')(SVC_MODULE + ':server');
 
 /* Redis Client */
 redisClient = redis.createClient();
@@ -81,14 +84,14 @@ redisClient.on("connect", function()
    redisUp = true;
 
    // store the process details in the redis db
-   redisClient.hmset(["ProcessDetails", UPGRADE_SVC,
+   redisClient.hmset(["ProcessDetails", SVC_MODULE,
       JSON.stringify({pid:process.pid, startTime:time_tz})],
       function (err, res) {
          if (err) { log.error(err); }
 
    });
 
-   redisClient.set(UPGRADE_SVC_PID, process.pid, function(err, reply) {
+   redisClient.set(SVC_MODULE_PID, process.pid, function(err, reply) {
 
       if (err) {
 
@@ -100,14 +103,14 @@ redisClient.on("connect", function()
       log.debug('upgrade daemon set pid :' + process.pid);
    });
 
-   redisClient.hget("ProcessLogLevel", UPGRADE_SVC, function(err, reply) {
+   redisClient.hget("ProcessLogLevel", SVC_MODULE, function(err, reply) {
 
       if (err || !reply) {
 
          log.error('Redis: get log-level error(' + err + ')');
          logLevel = 'debug';
 
-         redisClient.hmset("ProcessLogLevel", UPGRADE_SVC, logLevel, function(err, reply) {
+         redisClient.hmset("ProcessLogLevel", SVC_MODULE, logLevel, function(err, reply) {
 
             log.info('Redis: set log-level(' + logLevel + ')');
          });
@@ -144,7 +147,7 @@ var pushSighup = function (pid)
 var writeMessage = function(pid, message)
 {
 
-   redisClient.set(WEB_SVR_SVC_MSG, message,
+   redisClient.set(MGMT_SVC_MSG, message,
 
       function(err, reply) {
 
@@ -162,7 +165,7 @@ var writeMessage = function(pid, message)
 /* write the message to redis database */
 var publishMessage = function(message)
 {
-   redisClient.get(WEB_SVR_SVC_PID,
+   redisClient.get(MGMT_SVC_PID,
 
       function(err, reply) {
 
