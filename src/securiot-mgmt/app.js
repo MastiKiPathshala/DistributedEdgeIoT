@@ -288,15 +288,14 @@ var appUpdateSystemStatus = function(callback)
 	fs.readFile(SECURIOT_VERSION_FILE, 'utf8', function(err, data) {
    
 		if (err || !data) {
-
-         log.debug('software version detail not found');
-<<<<<<< HEAD
-         activeVersion = 'Who knows';
+			log.debug('software version detail not found');
+			activeVersion = '';
 
 		} else {
 			var buf = data.toString();
+			log.debug('kernel version (' + buf);
 			var obj = JSON.parse(buf);
-			activeVersion = obj.sysSwVersion;
+			activeVersion = obj.system_sw_version;
 		}
 
 		softwareVersion = activeVersion;
@@ -341,42 +340,6 @@ var appUpdateSystemStatus = function(callback)
 			});
 		});
 	});
-=======
-         activeVersion = '';
-
-      } else {
-
-         var buf = data.toString();
-         var obj = JSON.parse(buf);
-         activeVersion = obj.sysSwVersion;
-      }
-
-      version = activeVersion;
-
-      log.debug('software version (' + activeVersion + ')');
-   
-      redisClient.hmset("sysDetail", SOFTWARE_VERSION_TAG, activeVersion, function(err, reply) {
-      
-         if (err) {
-            log.error('software version set failed');
-         }
-      
-         callback();
-      });
-
-      redisClient.hget("sysDetail",SOFTWARE_VERSION_TAG, function(err, reply) {
-
-          if (err) {
-
-             log.debug('software version not found');
-          } else {
-
-             activeVersion = reply.toString();
-             version = reply.toString().slice(12);
-          }
-       });
-   });
->>>>>>> 189c514078d959554a82b9f8f0161bef17b9cdfb
 }
 
 //hardware version
@@ -569,14 +532,11 @@ var appSetState = function()
 			callback();
 		},
 */
-
-      // initialize host name 
-       function(callback) {
-		log.debug('hecking SIGHUP received');
-
-         appSetHostName(callback);
-      }
-   ]);
+		// initialize host name 
+		function(callback) {
+			appSetHostName(callback);
+		}
+	]);
 }
 
 // catch SIGHUP events
