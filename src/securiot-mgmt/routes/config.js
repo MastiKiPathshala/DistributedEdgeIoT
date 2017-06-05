@@ -151,7 +151,7 @@ config.post('/logLevel',function(req, res, next)
             log.warn(svcName + ' set log-level failed ' + err);
             res.json({success: false});
          } else {
-            if (svcName === WEB_SVR_SVC) {
+            if (svcName === MGMT_SVC) {
 
                log.setLevel(logLevel);
             }

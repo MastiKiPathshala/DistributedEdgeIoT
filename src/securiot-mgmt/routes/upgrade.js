@@ -1,4 +1,4 @@
-
+// upgrade hanler API on the web-service module
 var fs         = require('fs');
 var exec       = require ('child_process').exec;
 var spawn      = require ('child_process').spawn;
@@ -7,7 +7,7 @@ var express    = require('express');
 
 var upgrade = express.Router();
 
-UPGRADE_SVC      = 'secureiot-upgrade';
+UPGRADE_SVC      = BASE_MODULE + '-upgrade';
 UPGRADE_SVC_PID  = UPGRADE_SVC + '-pid';
 UPGRADE_SVC_NAME = UPGRADE_SVC + '-service';
 
