@@ -69,8 +69,6 @@ log.methodFactory = function (methodName, logLevel, loggerName) {
 /* trace levels ("trace" ,"debug","info","warn","error") in increase order */
 log.setLevel('debug');
 
-var debug = require('debug')(SVC_MODULE + ':server');
-
 /* Redis Client */
 redisClient = redis.createClient();
 
