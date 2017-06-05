@@ -14,6 +14,7 @@
  ************************************************************************/
 
 var exec = require('child_process').exec;
+var system = require ('./routes/system');
 
 var simulateDownloadImage = function(imageUrl, callback) {
   var error = null;
@@ -159,6 +160,31 @@ exports.onFirmwareUpdate = function(request, response) {
   });
 }
 
+exports.updateRebootStatus = function (reasonStr) {
+	// Report the reboot before the physical restart
+	var date = new Date();
+	var patch = {
+		SystemStatus : {
+			reboot: {
+				lastReboot: date.toISOString(),
+				rebootReason: reasonStr
+			}
+		}
+	};
+	// Get device Twin
+	cloudClient.getTwin(function(err, twin) {
+		if (err) {
+            console.error('could not get twin');
+		} else {
+			log.debug('twin acquired');
+			twin.properties.reported.update(patch, function(err) {
+				if (err) throw err;
+				log.debug('Device reboot twin state reported')
+			});
+		}
+	});
+}
+
 exports.onReboot = function(request, response) {
 
     // Respond the cloud app for the direct method
@@ -169,35 +195,6 @@ exports.onReboot = function(request, response) {
             log.debug('Response to method \'' + request.methodName + '\' sent successfully.');
         }
     });
-
-    // Report the reboot before the physical restart
-    var date = new Date();
-    var patch = {
-        iothubDM : {
-            reboot : {
-                lastReboot : date.toISOString(),
-            }
-        }
-    };
-
-    // Get device Twin
-    cloudClient.getTwin(function(err, twin) {
-        if (err) {
-            console.error('could not get twin');
-        } else {
-            log.debug('twin acquired');
-            twin.properties.reported.update(patch, function(err) {
-                if (err) throw err;
-                log.debug('Device reboot twin state reported')
-            });  
-        }
-    });
-
-	child = exec('sudo reboot', function (error, stdout, stderr) {
-		if (error != null) {
-			log.debug('exec error: ' + error);
-		} else {
-    		log.debug('Rebooting!');
-		}
-	});
+	exports.updateRebootStatus ("IoTHub triggered reboot");
+	system.restartSystem ();
 };

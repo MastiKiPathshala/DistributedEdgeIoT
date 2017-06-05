@@ -11,6 +11,7 @@ var iwconfig = require('wireless-tools/iwconfig')
 var hostname = os.hostname();
 var ifconfig = require('wireless-tools/ifconfig');
 var redis = require('redis');
+azureDM = require ('../cloud_azure_directmethod');
 
 // router module
 var system = express.Router();
@@ -33,6 +34,7 @@ system.post('/', function(req, res) {
    var body = req.body;
    
    console.log(req.body)
+   console.log(req.header)
 
    switch (body.action) {
 
@@ -156,9 +158,10 @@ system.post('/', function(req, res) {
 
     case "REBOOT":
         log.debug(' received reboot request');
-        restartSystem();
         res.writeHead(200);
         res.end('{"status":true}');
+	azureDM.updateRebootStatus ("User Agent triggered reboot");
+        restartSystem();
         break;
 
     default:
@@ -384,7 +387,7 @@ function scanNetworks(iface, cb) {
     }.bind({ iface: iface, cb: cb }));
 }
 
-function restartSystem() {
+var restartSystem = function() {
    log.info(' system restart');
 
    exec('sudo reboot', function(err, stdout, stderr) {
@@ -432,3 +435,4 @@ var getInterfaces = function(callback)
 }
 
 module.exports = system;
+module.exports.restartSystem = restartSystem;

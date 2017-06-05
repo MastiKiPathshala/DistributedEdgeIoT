@@ -13,6 +13,7 @@ var express      = require('express');
 var bodyParser   = require('body-parser');
 var cookieParser = require('cookie-parser');
 var cloudConnect = require ('./cloud_main');
+var azureDT = require ('./cloud_azure_devicetwin');
 
 var usbIntfCheckTimer;
 //var usbDetectCounter = 0;
@@ -41,11 +42,12 @@ SECURIOT_DEFAULT_HARDWARE_SERIAL = "DHB-YY-XXXXX";
 
 SECURIOT_MAINTENANCE_TIMEOUT = (60*60000) // one hour 
 
-SOFTWARE_VERSION_TAG     = 'sysSwVersion';
-FIRMWARE_VERSION_TAG     = 'sysFwVersion';
-HARDWARE_VERSION_TAG     = 'sysHwVersion';
-HARDWARE_SERIAL_TAG      = 'sysHwSerial';
-HARDWARE_DESCRIPTION_TAG = 'sysHwDesc';
+SOFTWARE_VERSION_TAG	= 'softwareVersion';
+KERNEL_VERSION_TAG	= 'kernelVersion';
+HARDWARE_VERSION_TAG	= 'hardwareVersion';
+FIRMWARE_VERSION_TAG	= 'firmwareVersion';
+HARDWARE_SERIAL_TAG	= 'hardwareSerial';
+MANUFACTURER_TAG 	= 'manufacturer';
 
 //Global variables
 user = '';
@@ -209,75 +211,6 @@ var appSetSelfPid = function(callback)
    });
 }
 
-// kernel version
-var appGetKernelVersion = function(callback)
-{
-   exec('uname -r', function (error, stdout, stderr) {
-
-      if (error != null) {
-         log.debug('exec error: ' + error);
-      }
-
-      var data = stdout;
-      var kernVer = data.split("\n");
-
-      redisClient.hmset("sysDetail",'sysKernelVersion', kernVer[0], function(err, reply) {
-
-         if (err) {
-            log.debug('kernel version set failed');
-         }
-
-         callback();
-      });
-
-      redisClient.hget("sysDetail",'sysKernelVersion', function(err, reply) {
-
-         if (err) {
-            log.debug('kernel version not found');
-         } else {
-            kernVersion = reply.toString();
-            log.debug('kernel version(' + kernVersion + ')');
-         }
-      });
-   });
-}
-
-// firmware version
-var appGetFirmwareVersion = function(callback)
-{
-   exec('sudo vcgencmd version',
-
-      function (error, stdout, stderr) {
-
-         if (error != null) {
-            log.debug('exec error: ' + error);
-         }
-
-         var firmware = stdout;
-
-         data = firmware.toString().slice(57,99);
-
-         redisClient.hmset("sysDetail",FIRMWARE_VERSION_TAG, data, function(err, reply) {
-
-            if (err) {
-               log.debug('firmware version set failed');
-            }
-            callback();
-         });
-
-         redisClient.hget("sysDetail",FIRMWARE_VERSION_TAG,function(err,reply){
-
-            if (err) {
-               log.debug('firmware version not found');
-            } else {
-
-               fwVersion = reply.toString();
-               log.debug('firmware version(' + fwVersion + ')');
-            }
-         });
-  });
-}
-
 var appGetWlanMacAddr = function(callback)
 {
    exec('cat /sys/class/net/wlan0/address'  ,
@@ -291,14 +224,14 @@ var appGetWlanMacAddr = function(callback)
          var wlan = stdout;
          var wlanMac = wlan.split("\n");;
 
-         redisClient.hmset("sysDetail",'sysWlanMacAddr', wlanMac[0], function(err, reply) {
+         redisClient.hmset("SystemStatus",'sysWlanMacAddr', wlanMac[0], function(err, reply) {
             if (err) {
                log.debug('wlan mac address set failed');
             }
             callback();
          });
 
-         redisClient.hget("sysDetail",'sysWlanMacAddr', function(err, reply) {
+         redisClient.hget("SystemStatus",'sysWlanMacAddr', function(err, reply) {
 
             if (err) {
                log.debug('wlan mac address not found');
@@ -326,7 +259,7 @@ var appGetEthmacAddr = function(callback)
          var eth = stdout;
          var ethMac = eth.split("\n");
 
-         redisClient.hmset("sysDetail",'sysEthMacAddr', ethMac[0], function(err, reply) {
+         redisClient.hmset("SystemStatus",'sysEthMacAddr', ethMac[0], function(err, reply) {
 
             if (err) {
                log.debug('eth mac address set failed');
@@ -334,7 +267,7 @@ var appGetEthmacAddr = function(callback)
             callback();
          });
 
-         redisClient.hget("sysDetail",'sysEthMacAddr', function(err, reply) {
+         redisClient.hget("SystemStatus",'sysEthMacAddr', function(err, reply) {
 
             if (err) {
 
@@ -348,209 +281,71 @@ var appGetEthmacAddr = function(callback)
    });
 }
 
-/*
-var setupPPPInterface = function()
-{
-   var cmd = "ifconfig";
-
-   exec(cmd, function(err, stdout) {
-
-      var ifData = stdout;
-
-      log.trace('ifconfig: ' + ifData);
-
-      if ((ifData.indexOf("wwan0") > -1) && (ifData.indexOf("ppp") < 0)) {
-
-         var cmd = "sudo wvdialconf";
-
-         exec(cmd, function(err, stdout) {
-
-            log.debug("wwan0 is UP, setting wvdial.conf file");
-            var cmd = "sudo wvdial";
-
-            exec(cmd, function(err, stdout) {
-
-               log.debug("Triggered wvdial for wwan0");
-
-               clearInterval(usbIntfCheckTimer);
-               usbDetectCounter  = 0;
-            });
-         });
-      } else {
-
-         log.trace(' wwan0 not found, retry count: ' + usbDetectCounter);
-
-         if (usbDetectCounter >= 10) {
-
-            clearInterval(usbIntfCheckTimer);
-            usbDetectCounter = 0;
-         } else {
-
-            usbDetectCounter ++;
-         }
-      }
-   });
-}
-
-var detectSetupUSBModem = function (callback)
-{
-   usbDetect.on ('add', function (device) {
-
-      log.info ('USB device added, ' + JSON.stringify(device));
-
-      var vendorId  = device.vendorId.toString(16);
-      var productId = device.productId.toString(16);
-
-      var usbDev = "/etc/securiot/usbDeviceList/" + vendorId + ":" + productId;
-      log.debug ('USB device file : ' + usbDev);
-
-      try {
-
-         if (fs.statSync(usbDeviceFile).isFile()) {
-
-            // CREATE usb_modeswitch.conf file)
-
-            log.info ("Detected USB Modem in Storage Media mode");
-            var cmd = "sudo cp /etc/usb_modeswitch.default /etc/usb_modeswitch.conf";
-
-            exec(cmd, function(err, stdout, stdout) {
-
-               cmd = "sudo echo \"\nDefaultVendor=0x" + vendorId +
-                  "\nDefaultProduct=0x" + productId +
-                  "\" | sudo tee --append /etc/usb_modeswitch.conf";
-
-               exec(cmd, function(err, stdout, stdout) {
-
-                  cmd = "sudo cat " + usbDeviceFile + ">> /etc/usb_modeswitch.conf"
-
-                  exec(cmd, function(err, stdout, stdout) {
-
-                     log.debug ("USB mode switch conf file generated");
-                     cmd = "sudo usb_modeswitch -c /etc/usb_modeswitch.conf"
-
-                     exec(cmd, function(err, stdout, stdout) {
-
-                        log.info ("Switched USB device to Modem mode");
-                        usbIntfCheckTimer = setInterval(setupPPPInterface, USB_INTF_TIME);
-                     });
-                  });
-               });
-            });
-         }
-      } catch (e) {
-         log.debug ("Detected USB device either not a Modem or already in Modem mode");
-      }
-
-   });
-
-   usbDetect.on ('remove', function (device) {
-      log.info ("Removed USB device " + JSON.stringify(device));
-   });
-
-   usbDetect.find (function (err, device) {
-
-      log.debug ('USB device found: ' + JSON.stringify(device));
-      var usbArray = JSON.stringify(device);
-      var jsonUsbArray = JSON.parse(usbArray);
-
-      for (var i = 0; i < jsonUsbArray.length; i++) {
-
-         var productId = jsonUsbArray[i].productId.toString(16);
-         var vendorId  = jsonUsbArray[i].vendorId.toString(16);
-
-         log.debug ("Vendor ID :" + vendorId + " Product ID :" + productId );
-
-         usbDeviceFile = "/etc/securiot/usbDeviceList/" + vendorId + ":" + productId;
-         log.debug ("USB device file : " + usbDeviceFile);
-
-         try {
-
-            if (fs.statSync(usbDeviceFile).isFile()) {
-
-               // CREATE usb_modeswitch.conf file)
-               var cmd = "sudo cp /etc/usb_modeswitch.default /etc/usb_modeswitch.conf";
-
-               exec(cmd, function(err, stdout, stdout) {
-                  var cmd = "sudo echo \"\nDefaultVendor=0x" + vendorId +
-                     "\nDefaultProduct=0x" + productId +
-                     "\" | sudo tee --append /etc/usb_modeswitch.conf";
-
-                  exec(cmd, function(err, stdout, stdout) {
-                     var cmd = "sudo cat " + usbDeviceFile +
-                        ">> /etc/usb_modeswitch.conf";
-
-                     exec(cmd, function(err, stdout, stdout) {
-
-                        log.debug ("USB mode switch conf file generated");
-                        var cmd = "sudo usb_modeswitch -c /etc/usb_modeswitch.conf";
-
-                        exec(cmd, function(err, stdout, stdout) {
-                           log.info ("Switched USB device to Modem mode");
-                        });
-                     });
-                  });
-               });
-            }
-         } catch (e) {
-            log.debug ("Detected USB device either not a Modem or already in Modem mode");
-         }
-
-         usbIntfCheckTimer = setInterval(setupPPPInterface, USB_INTF_TIME);
-      }
-   });
-
-   callback();
-}
-*/
-
 // get the software version and set in the redis
-var appGetSoftwareVersion = function(callback)
+var appUpdateSystemStatus = function(callback)
 {
-   fs.readFile(SECURIOT_VERSION_FILE, 'utf8', function(err, data) {
+	var systemStatus = {};
+	fs.readFile(SECURIOT_VERSION_FILE, 'utf8', function(err, data) {
    
-      if (err || !data) {
+		if (err || !data) {
 
          log.debug('software version detail not found');
-         activeVersion = '';
+         activeVersion = 'Who knows';
 
-      } else {
+		} else {
+			var buf = data.toString();
+			var obj = JSON.parse(buf);
+			activeVersion = obj.sysSwVersion;
+		}
 
-         var buf = data.toString();
-         var obj = JSON.parse(buf);
-         activeVersion = obj.sysSwVersion;
-      }
+		softwareVersion = activeVersion;
+		systemStatus.softwareVersion =  activeVersion;
+		log.debug('software version (' + activeVersion + ')');
 
-      version = activeVersion;
+		exec('uname -r', function (error, stdout, stderr) {
 
-      log.debug('software version (' + activeVersion + ')');
-   
-      redisClient.hmset("sysDetail",SOFTWARE_VERSION_TAG, activeVersion, function(err, reply) {
-      
-         if (err) {
-            log.error('software version set failed');
-         }
-      
-         callback();
-      });
+			if (error) {
+				log.debug('exec error: ' + error);
+			} else {
+				var data = stdout;
+				var temp = data.split("\n");
+				var kernelVersion = temp[0];
+				systemStatus.kernelVersion = kernelVersion;
+				log.debug('kernel version (' + kernelVersion + ')');
+			}
 
-      redisClient.hget("sysDetail",SOFTWARE_VERSION_TAG, function(err, reply) {
+			exec('sudo vcgencmd version', function (error, stdout, stderr) {
 
-          if (err) {
+				if (error) {
+					log.debug('firmware version detail not found');
+					firmwareVersion = '';
+				} else {
+					var data = stdout;
+					firmwareVersion = data.toString().slice(57,99);
+					systemStatus.firmwareVersion = firmwareVersion;
+					log.debug('firmware version (' + firmwareVersion + ')');
+				}
 
-             log.debug('software version not found');
-          } else {
+				systemStatus.manufacturer = "SecurIoT.in";
+				systemStatus.sensorsAttached = 2;
 
-             activeVersion = reply.toString();
-             version = reply.toString().slice(12);
-          }
-       });
-   });
+				redisClient.hmset ("SystemStatus",'SOFTWARE_VERSION_TAG', softwareVersion, 'FIRMWARE_VERSION_TAG', firmwareVersion, 'KERNEL_VERSION_TAG', kernelVersion, MANUFACTURER_TAG, "SecurIoT.in", function(err, reply) {
+
+					if (err) {
+						log.debug('kernel version set failed');
+					}
+					azureDT.updateSystemStatus (systemStatus);
+					callback();
+				});
+			});
+		});
+	});
 }
 
 //hardware version
 var appGetHardwareVersion = function(callback) 
 {
-   redisClient.hget("sysDetail",HARDWARE_VERSION_TAG, function(err, reply) {
+   redisClient.hget("SystemStatus",HARDWARE_VERSION_TAG, function(err, reply) {
    
       if (err || !reply) {
       
@@ -582,13 +377,13 @@ var appGetHardwareVersion = function(callback)
 
             log.debug('HW version (' + hwVersion + ', ' + hwDesc + '), Serial ' + hwSerial);
 
-            redisClient.hmset("sysDetail",HARDWARE_VERSION_TAG, hwVersion, function(err, reply) {
+            redisClient.hmset("SystemStatus",HARDWARE_VERSION_TAG, hwVersion, function(err, reply) {
             
                if (err) {
                   log.error('hardware version set failed');
                } 
                
-               redisClient.hmset("sysDetail",HARDWARE_DESCRIPTION_TAG,
+               redisClient.hmset("SystemStatus",HARDWARE_DESCRIPTION_TAG,
                   hwDesc, function(err, reply) {
                
                   if (err) {
@@ -603,7 +398,7 @@ var appGetHardwareVersion = function(callback)
 
          hwVersion = reply.toString();
 
-         redisClient.hget("sysDetail",HARDWARE_DESCRIPTION_TAG, function(err, reply) {
+         redisClient.hget("SystemStatus",HARDWARE_DESCRIPTION_TAG, function(err, reply) {
 
             if (err || !reply) {
 
@@ -625,13 +420,13 @@ var appGetHardwareVersion = function(callback)
             callback();
          });
 
-         redisClient.hget("sysDetail",HARDWARE_SERIAL_TAG, function(err, reply) {
+         redisClient.hget("SystemStatus",HARDWARE_SERIAL_TAG, function(err, reply) {
 
             if (err || !reply) {
 
                hwSerial = SECURIOT_DEFAULT_HARDWARE_SERIAL;
 
-               redisClient.hmset("sysDetail",HARDWARE_SERIAL_TAG, hwSerial, function(err, reply) {
+               redisClient.hmset("SystemStatus",HARDWARE_SERIAL_TAG, hwSerial, function(err, reply) {
 
                   if (err) {
                     log.error('hardware serial set failed');
@@ -697,25 +492,15 @@ var appSetState = function()
       // software version
       function(callback) {
 
-         appGetSoftwareVersion(callback);
+         appUpdateSystemStatus(callback);
       },
-
+/*
       // hardware version
       function(callback) {
 
          appGetHardwareVersion(callback);
       },
 
-      //kernel version
-      function(callback) {
-
-         appGetKernelVersion(callback);
-      },
-       
-      function(callback) {
-         appGetFirmwareVersion(callback);
-      },     
-         
       // mac Addr
       function(callback) {
 
@@ -727,7 +512,6 @@ var appSetState = function()
          appGetEthmacAddr(callback);
       },  
 
-/*
       // check system status
       function(callback) {
 
