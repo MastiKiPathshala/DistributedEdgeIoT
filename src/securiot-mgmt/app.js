@@ -24,7 +24,7 @@ HOST_HOME    = '/home/Kat@ppa';
 BASE_DIR     = HOST_HOME + '/' + BASE_MODULE + '-gateway/';
 WORKING_DIR  = BASE_DIR + 'src/';
 
-SVC_MODULE      = 'securiot-mgmt';
+SVC_MODULE      = BASE_MODULE + '-mgmt';
 SVC_MODULE_NAME = SVC_MODULE + '-service';
 SVC_MODULE_PID  = SVC_MODULE + '-pid';
 SVC_MODULE_MSG  = SVC_MODULE + '-upgrade-msg';

@@ -35,8 +35,8 @@ SVC_MODULE_NAME = SVC_MODULE + '-service';
 SVC_MODULE_PID  = SVC_MODULE + '-pid';
 SVC_MODULE_MSG  = MGMT_SVC + '-msg';
 
-BASE_DIR = HOST_HOME + '/' + BASE_MODULE + '-gateway';
-WORKING_DIR = BASE_DIR + '/src/';
+BASE_DIR    = HOST_HOME + '/' + BASE_MODULE + '-gateway/';
+WORKING_DIR = BASE_DIR + 'src/';
 
 SYSTEM_DELAY = 5000;
 
