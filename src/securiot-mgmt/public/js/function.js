@@ -231,9 +231,9 @@ var showUser = function()
    }
 }
 
-var getLatestSwVersion = function()
+var getLatestSwVersionId = function()
 {
-   var get_url = 'api/config/latestSwVersionId'
+   var get_url = '/api/config/latestSwVersionId'
 
    document.getElementById("swVersionBtn").style.display = 'none';
 

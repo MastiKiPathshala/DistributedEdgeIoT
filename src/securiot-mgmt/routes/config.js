@@ -17,7 +17,7 @@ BUILD_URL    = BUILD_SVR + '/' +  BASE_MODULE + '/';
 
 //RESTART
 
-config.post('/restart/', function(req, res, next)
+config.post('/svcRestart', function(req, res, next)
 {
    log.debug('restart!');
 
@@ -37,7 +37,7 @@ config.post('/restart/', function(req, res, next)
 });
 
 // REBOOT
-config.post('/reboot', function(req, res, next)
+config.post('/SysRestart', function(req, res, next)
 {
    if (upgrade_state != 0) {
 
@@ -151,7 +151,7 @@ config.post('/logLevel',function(req, res, next)
             log.warn(svcName + ' set log-level failed ' + err);
             res.json({success: false});
          } else {
-            if (svcName === WEB_SVR_SVC) {
+            if (svcName === MGMT_SVC) {
 
                log.setLevel(logLevel);
             }
