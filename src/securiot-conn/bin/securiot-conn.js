@@ -18,10 +18,13 @@ log = require('loglevel');
 var intfCheckTimer;
 var usbIntfCheckTimer;
 var usbDetectCounter = 0;
-var USB_INTF_TIME = 1000;
-var INTF_TIME = 10000;
-var intfUpState = true;
+
+var INTF_TIME     = 50000;
+var USB_INTF_TIME = 10000;
+
+var intfCheck   = false;
 var dnsUpState  = false;
+var intfUpState = false;
 
 BASE_MODULE  = 'securiot';
 HOST_HOME    = '/home/Kat@ppa';
@@ -321,74 +324,100 @@ var checkInterfaceStatus = function()
 {
    var ipAddrs = [];
 
-   intfUpState = true;
-   dnsUpState  = true;
+   if (intfCheck === false) {
 
-   var interfaces = os.networkInterfaces();
+      intfCheck   = true;
+      intfUpState = true;
+      dnsUpState  = true;
 
-   for (var idx in interfaces) {
+      log.debug('INTERFACE check');
 
-      log.debug(' interface: ' + idx);
+      var interfaces = os.networkInterfaces();
 
-      if (idx != 'lo') {
+      for (var idx in interfaces) {
 
-         for (var jdx in interfaces[idx]) {
-         
-             var ipAddr = interfaces[idx][jdx];
-             log.debug(' interfaces: ' + idx + ': '  + jdx + ': '+ JSON.stringify(ipAddr));
-         
-             if (ipAddr.family === 'IPv4' && !ipAddr.internal) {
-                 ipAddrs.push(ipAddr.address);
-             }
+         log.trace(' interface: ' + idx);
+
+         if (idx != 'lo') {
+
+            for (var jdx in interfaces[idx]) {
+
+                var ipAddr = interfaces[idx][jdx];
+                log.trace(' interfaces: ' + idx + ': '  + jdx + ': '+ JSON.stringify(ipAddr));
+
+                if (ipAddr.family === 'IPv4' && !ipAddr.internal) {
+                    ipAddrs.push(ipAddr.address);
+                }
+            }
          }
       }
-   }
 
-   if (ipAddrs.length === 0) {
+      if (ipAddrs.length === 0) {
 
-      intfUpState = false;
-   } else {
+         log.debug('INTERFACE DOWN' + JSON.stringify(ipAddrs));
+         intfCheck   = false;
+         intfUpState = false;
+      } else {
 
-      /* check ip DNS */
-      checkDns();
+         log.debug('INTERFACE OK' + JSON.stringify(ipAddrs));
+         /* check ip DNS */
+         checkDns();
+      }
    }
 
 }
 
 var checkDns = function()
 {
+    log.debug('DNS check');
+
     require('dns').lookup('www.microsoft.com',function(err) {
 
         if (err && err.code == "ENOTFOUND") {
+           log.debug('DNS FAIL');
+           intfCheck  = false;
            dnsUpState = false;
         } else {
-           checkConnectivity();
+           log.debug('DNS OK');
+           checkNet();
         }
     })
 }
 
-var checkConnectivity = function() {
+var checkNet = function() {
 
-   var RE_SUCCESS = /bytes from/i;
-   var INTERVAL = 2; // in seconds
+   var data_str = /bytes from/i;
+   var stat_str = /ping statistics/i;
+   var interval = 2; // in seconds
+   var count = 5;
    var IP = '8.8.8.8';
 
-   var proc = spawn('ping', ['-v', '-n', '-i', INTERVAL, IP]);
-   var rli = rl.createInterface(proc.stdout, proc.stdin);
+   log.debug('PING check');
 
    network.online = false;
 
-   rli.on('line', function(str) {
+   var proc = spawn('ping', ['-v', '-n', '-c', count,'-i', interval, IP]);
 
-      if (RE_SUCCESS.test(str)) {
+   proc.stdout.on('data', function (data) {
 
-         if (!network.online) {
+      log.trace('PING out: ' + data);
 
+      if (data_str.test(data) ||
+          stat_str.test(data)) {
+
+         intfCheck  = false;
+
+         if (network.online === false) {
+
+           log.debug('PING OK');
            network.online = true;
            network.emit('online');
          }
-      } else if (network.online) {
+      } else if (network.online === true) {
 
+         intfCheck  = false;
+
+         log.debug('PING FAIL');
          network.online = false;
          network.emit('offline');
       }
