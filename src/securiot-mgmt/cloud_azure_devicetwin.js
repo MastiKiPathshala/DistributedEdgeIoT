@@ -54,43 +54,46 @@ var completeConfigChange =  function(twin) {
 
 exports.updateSystemStatus = function (systemStatus) {
 
-	cloudClient.getTwin (function (err, twin) {
-		var patch = {
-			SystemStatus: {
-				softwareVersion: systemStatus.softwareVersion,
-				kernelVersion: systemStatus.kernelVersion,
-				hardwareVersion: systemStatus.hardwareVersion,
-				firmwareVersion: systemStatus.firmwareVersion,
-				manufacturer: systemStatus.manufacturer,
-				sensorsAttached: systemStatus.sensorsAttached,
-				lastBootup: new Date()
-			}
-		};
-		twin.properties.reported.update(patch, function(err) {
-			if (err) {
-				log.error('System Status not updated : ' + err);
-			} else {
-				log.debug('System Status updated: ' + JSON.stringify(patch));
-			}
-		});
-	});
+   if (typeof cloudClient != "undefined") {
+
+      cloudClient.getTwin (function (err, twin) {
+         var patch = {
+            SystemStatus: {
+               softwareVersion: systemStatus.softwareVersion,
+               kernelVersion: systemStatus.kernelVersion,
+               hardwareVersion: systemStatus.hardwareVersion,
+               firmwareVersion: systemStatus.firmwareVersion,
+               manufacturer: systemStatus.manufacturer,
+               sensorsAttached: systemStatus.sensorsAttached,
+               lastBootup: new Date()
+            }
+         };
+         twin.properties.reported.update(patch, function(err) {
+            if (err) {
+               log.error('System Status not updated : ' + err);
+            } else {
+               log.debug('System Status updated: ' + JSON.stringify(patch));
+            }
+         });
+      });
+   }
 }
 
 exports.onConfigChange = function(err, twin) {
-	if (err) {
-		console.error('could not get twin');
-	} else {
-		log.debug('retrieved device twin');
-		twin.properties.reported.telemetryConfig = {
-			configId: "1",
-			sendFrequency: "24h"
-		}
-		twin.on('properties.desired', function(desiredChange) {
-			log.debug("received change: "+JSON.stringify(desiredChange));
-			var currentTelemetryConfig = twin.properties.reported.telemetryConfig;
-			if (desiredChange.telemetryConfig &&desiredChange.telemetryConfig.configId !== currentTelemetryConfig.configId) {
-				initConfigChange(twin);
-			}
-		});
-	}
+   if (err) {
+      console.error('could not get twin');
+   } else {
+      log.debug('retrieved device twin');
+      twin.properties.reported.telemetryConfig = {
+         configId: "1",
+         sendFrequency: "24h"
+      }
+      twin.on('properties.desired', function(desiredChange) {
+         log.debug("received change: "+JSON.stringify(desiredChange));
+         var currentTelemetryConfig = twin.properties.reported.telemetryConfig;
+         if (desiredChange.telemetryConfig &&desiredChange.telemetryConfig.configId !== currentTelemetryConfig.configId) {
+            initConfigChange(twin);
+         }
+      });
+   }
 }

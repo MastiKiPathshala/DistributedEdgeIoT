@@ -12,19 +12,25 @@
  * file 'LICENSE.txt', which is part of this source code package.
  *
  ************************************************************************/
-var mqtt = require('mqtt')
-var fs = require('fs');
-var os = require("os");
-var exec = require('child_process').exec;
-var moment = require('moment-timezone');
-var azureDM = require('./cloud_azure_directmethod');
-var azureDT = require('./cloud_azure_devicetwin');
+var fs       = require('fs');
+var os       = require("os");
+var exec     = require('child_process').exec;
+var mqtt     = require('mqtt')
+var moment   = require('moment-timezone');
+var azureDM  = require('./cloud_azure_directmethod');
+var azureDT  = require('./cloud_azure_devicetwin');
 var azureC2D = require('./cloud_azure_c2dmessage');
+var express  = require('express');
 
-var azureConnectCallback = function (err) {
+var cloudConnect = express.Router();
+
+var azureConnectCallback = function (err)
+{
    if (err) {
+
       log.error('Azure Cloud Client connection failed : ' + err);
    } else {
+
       log.debug('Azure Cloud Client connected');
       //cloudClient.on('message', azureC2D.onC2DMessage);
       cloudClient.getTwin(azureDT.onConfigChange);
@@ -34,7 +40,8 @@ var azureConnectCallback = function (err) {
    }
 };
 
-var awsConnectCallback = function (err) {
+var awsConnectCallback = function (err)
+{
    if (err) {
       log.error('AWS Cloud Client connection failed : ' + err);
    } else {
@@ -42,48 +49,54 @@ var awsConnectCallback = function (err) {
    }
 };
 
-//exports.initializeLocalClient = function () {
+var initializeLocalClient = function ()
+{
    log.debug('Local MQTT Client initialization initiated');
+
    if (fs.existsSync('/etc/securiot.in/config.txt')) {
-      localConfigData = fs.readFileSync('/etc/securiot.in/config.txt');
+
+      localConfigData  = fs.readFileSync('/etc/securiot.in/config.txt');
       parsedConfigData = JSON.parse(localConfigData);
 
       forwardingRule = parsedConfigData.gatewaySaurabhpi.forwarding_rules;
       localClient  = mqtt.connect('mqtt://localhost')
    }
-//}
+}
 
-//exports.initializeCloudClient = function () {
+var initializeCloudClient = function ()
+{
    log.debug('Cloud MQTT Client initialization initiated');
 
    if (fs.existsSync('/etc/securiot.in/config.txt')) {
+
       serverType = parsedConfigData.gatewaySaurabhpi.ServerConfig.data.ServerType
+
       switch (serverType) {
-         case "azure":
-            log.info('Cloud Server is AZURE');
-            iotHubName = parsedConfigData.gatewaySaurabhpi.ServerConfig.data.AzureConfig.IoTHub;;
-            protocol = parsedConfigData.gatewaySaurabhpi.ServerConfig.data.AzureConfig.Protocol;
-            deviceId = parsedConfigData.gatewaySaurabhpi.ServerConfig.data.AzureConfig.DeviceId;
-            accessKey = parsedConfigData.gatewaySaurabhpi.ServerConfig.data.AzureConfig.AccessKey;
-            connectionString = 'HostName='+iotHubName+'.azure-devices.net;DeviceId='+deviceId+';SharedAccessKey='+accessKey;
-            clientFromConnectionString = require('azure-iot-device-'+protocol).clientFromConnectionString;
 
-            cloudClient = clientFromConnectionString(connectionString);
-            var Message = require('azure-iot-device').Message;
-            cloudClient.open(azureConnectCallback);
-         break;
+      case "azure":
+         log.info('Cloud Server is AZURE');
+         iotHubName       = parsedConfigData.gatewaySaurabhpi.ServerConfig.data.AzureConfig.IoTHub;;
+         protocol         = parsedConfigData.gatewaySaurabhpi.ServerConfig.data.AzureConfig.Protocol;
+         deviceId         = parsedConfigData.gatewaySaurabhpi.ServerConfig.data.AzureConfig.DeviceId;
+         accessKey        = parsedConfigData.gatewaySaurabhpi.ServerConfig.data.AzureConfig.AccessKey;
+         connectionString = 'HostName='+iotHubName+'.azure-devices.net;DeviceId='+deviceId+';SharedAccessKey='+accessKey;
+         clientFromConnectionString = require('azure-iot-device-'+protocol).clientFromConnectionString;
 
-         case "aws":
-            // Placeholder for now
-         break;
+         cloudClient = clientFromConnectionString(connectionString);
+         var Message = require('azure-iot-device').Message;
+         cloudClient.open(azureConnectCallback);
+      break;
+
+      case "aws":
+         // Placeholder for now
+      break;
       }
    }
-//}
-
+}
 
 var gatewayUniqueId;
 
-child = exec('cat /sys/class/net/eth0/address'  ,
+var child = exec('cat /sys/class/net/eth0/address',
 
       function (error, stdout, stderr) {
 
@@ -97,43 +110,45 @@ child = exec('cat /sys/class/net/eth0/address'  ,
    });
 
 
-if(typeof localClient != "undefined") {
-localClient.on('connect', function () {
+if (typeof localClient != "undefined") {
 
-   log.debug('Local MQTT Client connected, setting up subscriptions');
-   localClient.subscribe('gps-data');
-   localClient.subscribe('temp-data');
-   localClient.subscribe('humid-data');
-   localClient.subscribe('no2-data');
-   localClient.subscribe('so2-data');
-})
+   localClient.on('connect', function () {
+
+      log.debug('Local MQTT Client connected, setting up subscriptions');
+      localClient.subscribe('gps-data');
+      localClient.subscribe('temp-data');
+      localClient.subscribe('humid-data');
+      localClient.subscribe('no2-data');
+      localClient.subscribe('so2-data');
+   });
 }
 
- //var finalData;
- var gpsCount = 0;
- var tempCount = 0;
- var humidCount = 0;
- var so2Count = 0;
- var no2Count = 0;
+//var finalData;
+var gpsCount = 0;
+var tempCount = 0;
+var humidCount = 0;
+var so2Count = 0;
+var no2Count = 0;
 
-if(typeof localClient != "undefined") {
-localClient.on('message', function (topic, data) {
+if (typeof localClient != "undefined") {
 
-   //log.debug(data.toString());
+   localClient.on('message', function (topic, data) {
 
-   switch (topic) {
+      //log.debug(data.toString());
+
+      switch (topic) {
 
       case "gps-data":
 
          gpsCount ++;
-          var now = moment();
-         var currentTime = now.tz("America/New_York").format('YYYY-MM-DDTHH:mm:ss.SSSZZ');
+         var now = moment();
+         var currentTime   = now.tz("America/New_York").format('YYYY-MM-DDTHH:mm:ss.SSSZZ');
 
-         var gpsData = data.toString();
-         var splitOutput = gpsData.split("-");
-         var healthScore = parseFloat(splitOutput[0]);
-         var finalScore = healthScore*2.5;
-         var finalGpsData = JSON.stringify({ sno : gpsCount.toString(), gatewayId : gatewayUniqueId,
+         var gpsData       = data.toString();
+         var splitOutput   = gpsData.split("-");
+         var healthScore   = parseFloat(splitOutput[0]);
+         var finalScore    = healthScore*2.5;
+         var finalGpsData  = JSON.stringify({ sno : gpsCount.toString(), gatewayId : gatewayUniqueId,
                   sensorId : "gps-"+gatewayUniqueId, dataType : splitOutput[2],
                   latitude : splitOutput[0], longitude : splitOutput[1],time : currentTime,qualityScore :finalScore })
 
@@ -144,13 +159,13 @@ localClient.on('message', function (topic, data) {
 
          tempCount ++;
          var now = moment();
-         var currentTime = now.tz("America/New_York").format('YYYY-MM-DDTHH:mm:ss.SSSZZ');
+         var currentTime   = now.tz("America/New_York").format('YYYY-MM-DDTHH:mm:ss.SSSZZ');
 
-         var tempData = data.toString();
-         var splitTemp = tempData.split("-");
-         var makeTempData = parseFloat(splitTemp[0]);
-         var finalTemp = makeTempData*3.0;
-         var finalScore = finalTemp + 12;
+         var tempData      = data.toString();
+         var splitTemp     = tempData.split("-");
+         var makeTempData  = parseFloat(splitTemp[0]);
+         var finalTemp     = makeTempData*3.0;
+         var finalScore    = finalTemp + 12;
          var finalTempData = JSON.stringify({sno : tempCount.toString(), gatewayId : gatewayUniqueId,
                   sensorId : "temp-"+gatewayUniqueId, dataType : splitTemp[2],
                   temperature : finalTemp ,time : currentTime,qualityScore :finalScore})
@@ -162,13 +177,13 @@ localClient.on('message', function (topic, data) {
 
          humidCount ++;
          var now = moment();
-         var currentTime = now.tz("America/New_York").format('YYYY-MM-DDTHH:mm:ss.SSSZZ');
+         var currentTime    = now.tz("America/New_York").format('YYYY-MM-DDTHH:mm:ss.SSSZZ');
 
-         var humidData = data.toString();
-         var splitHumid = humidData.split("-");
-         var makeHumidData = parseFloat(splitHumid[1]);
-         var finalHumid = makeHumidData+20.0;
-         var finalScore = finalHumid -18;
+         var humidData      = data.toString();
+         var splitHumid     = humidData.split("-");
+         var makeHumidData  = parseFloat(splitHumid[1]);
+         var finalHumid     = makeHumidData+20.0;
+         var finalScore     = finalHumid -18;
          var finalHumidData = JSON.stringify({sno :humidCount.toString(), gatewayId : gatewayUniqueId,
                   sensorId : "humid-"+gatewayUniqueId, dataType : splitHumid[2],
                   humidity : finalHumid ,time : currentTime,qualityScore :finalScore})
@@ -180,13 +195,14 @@ localClient.on('message', function (topic, data) {
 
          no2Count ++;
          var now = moment();
-         var currentTime = now.tz("America/New_York").format('YYYY-MM-DDTHH:mm:ss.SSSZZ');
 
-         var no2Data = data.toString();
-         var splitNo2 = no2Data.split("-");
-         var makeNo2Data = parseFloat(splitNo2[0]);
-         var finalNo2 = makeNo2Data+7.0;
-         var finalScore = finalNo2 + 14;
+         var currentTime  = now.tz("America/New_York").format('YYYY-MM-DDTHH:mm:ss.SSSZZ');
+
+         var no2Data      = data.toString();
+         var splitNo2     = no2Data.split("-");
+         var makeNo2Data  = parseFloat(splitNo2[0]);
+         var finalNo2     = makeNo2Data+7.0;
+         var finalScore   = finalNo2 + 14;
          var finalNo2Data = JSON.stringify({sno : no2Count.toString(), gatewayId : gatewayUniqueId,
                   sensorId : "no2-"+gatewayUniqueId, dataType : splitNo2[2],
                   no2 : finalNo2 ,time : currentTime,qualityScore :finalScore})
@@ -198,85 +214,85 @@ localClient.on('message', function (topic, data) {
 
          so2Count ++
          var now = moment();
-         var currentTime = now.tz("America/New_York").format('YYYY-MM-DDTHH:mm:ss.SSSZZ');
-         var so2Data = data.toString();
-         var splitSo2 = so2Data.split("-");
-         var makeSo2Data = parseFloat(splitSo2[0]);
-         var finalSo2 = makeSo2Data+15.0;
-         var finalScore = finalSo2 -5;
+         var currentTime  = now.tz("America/New_York").format('YYYY-MM-DDTHH:mm:ss.SSSZZ');
+         var so2Data      = data.toString();
+         var splitSo2     = so2Data.split("-");
+         var makeSo2Data  = parseFloat(splitSo2[0]);
+         var finalSo2     = makeSo2Data+15.0;
+         var finalScore   = finalSo2 -5;
          var finalSo2Data = JSON.stringify({sno : so2Count.toString(), gatewayId : gatewayUniqueId,
                   sensorId : "so2-"+gatewayUniqueId, dataType : splitSo2[2],
                   so2 : finalSo2,time : currentTime ,qualityScore :finalScore})
 
          SendDataWhereverRequired (finalSo2Data);
          break;
-   }
-});
+      }
+   });
 }
-var SendDataWhereverRequired = function (finalData){
 
+var SendDataWhereverRequired = function (finalData)
+{
    log.debug(finalData);
-  // message is Buffer
+
    var dataForForwarding = new Message(finalData);
 
-   for (var rule in forwardingRule ) {
+   for (var rule in forwardingRule) {
 
-      //log.debug(forwardingRule[rule].match.data_type)
       switch (forwardingRule[rule].match.data_type) {
 
-         case "any":
-          //log.debug(forwardingRule[rule].than.send_to)
+      case "any":
          switch(forwardingRule[rule].than.send_to) {
 
-            case "cloud":
-
-                sendToCloud(dataForForwarding);
+         case "cloud":
+            sendToCloud(dataForForwarding);
             return;
 
-            case "analytics":
+         case "analytics":
 
-            sendToAnaltics(dataForForwarding);
+         sendToAnaltics(dataForForwarding);
             return;
 
-            case "daisy-chained":
-
+         case "daisy-chained":
             return;
 
-          }
-         case "HY":
+         }
+      case "HY":
 
          switch(forwardingRule[rule].then.sendto) {
 
-            case "cloud":
-            //sendToCloud(mesage);
-            return;
+         case "cloud":
+         //sendToCloud(mesage);
+         return;
 
-            case "analytics":
-            //sendToAnaltics(message);
-            return;
+         case "analytics":
+         //sendToAnaltics(message);
+         return;
 
-            case "daisy-chained":
-            return;
+         case "daisy-chained":
+         return;
 
-          }
-       }
-    }
+         }
+      }
+   }
 }
-var sendToCloud =function(message)
+
+var sendToCloud = function(message)
 {
    switch (serverType){
 
-      case "azure":
+   case "azure":
+      cloudClient.sendEvent(message, function (err) {
 
-         //log.debug("hello azure: "+message);
-         cloudClient.sendEvent(message, function (err) {
+         if (err) log.debug(err.toString());
 
-            if (err) log.debug(err.toString());
+      });
+      break;
 
-         });
-         break;
-
-      case "aws":
+   case "aws":
 
    }
 }
+
+module.exports = cloudConnect;
+module.exports.initializeLocalClient = initializeLocalClient;
+module.exports.initializeCloudClient = initializeCloudClient;

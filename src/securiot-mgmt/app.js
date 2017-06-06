@@ -9,15 +9,10 @@ var async        = require('async');
 var redis        = require('redis');
 var moment       = require('moment-timezone');
 var express      = require('express');
-//var usbDetect    = require ('usb-detection');
 var bodyParser   = require('body-parser');
 var cookieParser = require('cookie-parser');
 var cloudConnect = require ('./cloud_main');
 var azureDT = require ('./cloud_azure_devicetwin');
-
-var usbIntfCheckTimer;
-//var usbDetectCounter = 0;
-//USB_INTF_TIME = 1000;
 
 BASE_MODULE  = 'securiot';
 HOST_HOME    = '/home/Kat@ppa';
@@ -40,14 +35,14 @@ SECURIOT_DEFAULT_HARDWARE_VERSION = "RPi3";
 SECURIOT_DEFAULT_HARDWARE_DESCRIPTION = "Raspberry Pi 3 Model B";
 SECURIOT_DEFAULT_HARDWARE_SERIAL = "DHB-YY-XXXXX";
 
-SECURIOT_MAINTENANCE_TIMEOUT = (60*60000) // one hour 
+SECURIOT_MAINTENANCE_TIMEOUT = (60*60000) // one hour
 
-SOFTWARE_VERSION_TAG	= 'softwareVersion';
-KERNEL_VERSION_TAG	= 'kernelVersion';
-HARDWARE_VERSION_TAG	= 'hardwareVersion';
-FIRMWARE_VERSION_TAG	= 'firmwareVersion';
-HARDWARE_SERIAL_TAG	= 'hardwareSerial';
-MANUFACTURER_TAG 	= 'manufacturer';
+SOFTWARE_VERSION_TAG   = 'softwareVersion';
+KERNEL_VERSION_TAG   = 'kernelVersion';
+HARDWARE_VERSION_TAG   = 'hardwareVersion';
+FIRMWARE_VERSION_TAG   = 'firmwareVersion';
+HARDWARE_SERIAL_TAG   = 'hardwareSerial';
+MANUFACTURER_TAG    = 'manufacturer';
 
 //Global variables
 user = '';
@@ -117,7 +112,7 @@ redisClient.on("message", function(channel, command)
    var arr = command.split(' ');
 
    io.emit('queue', {status: arr[0], w_status: arr[1]});
-   
+
    log.log('WEB SOCKET STATUS : '+arr[1]);
 });
 
@@ -129,7 +124,7 @@ require('getmac').getMac(function(err, macAddress) {
 })
 
 // restart the webserver daemon after a fixed interval
-var appMaintenanceRestart = function() 
+var appMaintenanceRestart = function()
 {
    // while upgrade in progress, do not reboot
    if (upgradeState === 0) {
@@ -151,7 +146,7 @@ setTimeout(appMaintenanceRestart, SECURIOT_MAINTENANCE_TIMEOUT);
 var appSetLogLevel = function(callback)
 {
    redisClient.hget("procLogLevel", SVC_MODULE_NAME, function(err, reply) {
-    
+
       if (err || !reply) {
 
          log.debug('get log-level failed');
@@ -159,7 +154,7 @@ var appSetLogLevel = function(callback)
          logLevel = 'debug';
 
          redisClient.hmset("procLogLevel", SVC_MODULE_NAME, logLevel, function(err, reply) {
-          
+
             if (err) {
 
                log.debug('set log-level failed');
@@ -191,7 +186,7 @@ var appSetSelfPid = function(callback)
 
    // store the process details in the redis db
 
-   redisClient.hmset(["procDetails", SVC_MODULE_NAME, 
+   redisClient.hmset(["procDetails", SVC_MODULE_NAME,
       JSON.stringify({pid:process.pid, startTime:time_tz})],
       function (err, res) {
 
@@ -201,7 +196,7 @@ var appSetSelfPid = function(callback)
    });
 
    redisClient.set(SVC_MODULE_PID, process.pid, function(err, reply) {
-    
+
       if (err) {
          log.debug('set pid failed');
       } else {
@@ -284,88 +279,88 @@ var appGetEthmacAddr = function(callback)
 // get the software version and set in the redis
 var appUpdateSystemStatus = function(callback)
 {
-	var systemStatus = {};
-	fs.readFile(SECURIOT_VERSION_FILE, 'utf8', function(err, data) {
-   
-		if (err || !data) {
-			log.debug('software version detail not found');
-			activeVersion = '';
+   var systemStatus = {};
+   fs.readFile(SECURIOT_VERSION_FILE, 'utf8', function(err, data) {
 
-		} else {
-			var buf = data.toString();
-			log.debug('kernel version (' + buf);
-			var obj = JSON.parse(buf);
-			activeVersion = obj.system_sw_version;
-		}
+      if (err || !data) {
+         log.debug('software version detail not found');
+         activeVersion = '';
 
-		softwareVersion = activeVersion;
-		systemStatus.softwareVersion =  activeVersion;
-		log.debug('software version (' + activeVersion + ')');
+      } else {
+         var buf = data.toString();
+         log.debug('kernel version (' + buf);
+         var obj = JSON.parse(buf);
+         activeVersion = obj.system_sw_version;
+      }
 
-		exec('uname -r', function (error, stdout, stderr) {
+      softwareVersion = activeVersion;
+      systemStatus.softwareVersion =  activeVersion;
+      log.debug('software version (' + activeVersion + ')');
 
-			if (error) {
-				log.debug('exec error: ' + error);
-			} else {
-				var data = stdout;
-				var temp = data.split("\n");
-				var kernelVersion = temp[0];
-				systemStatus.kernelVersion = kernelVersion;
-				log.debug('kernel version (' + kernelVersion + ')');
-			}
+      exec('uname -r', function (error, stdout, stderr) {
 
-			exec('sudo vcgencmd version', function (error, stdout, stderr) {
+         if (error) {
+            log.debug('exec error: ' + error);
+         } else {
+            var data = stdout;
+            var temp = data.split("\n");
+            var kernelVersion = temp[0];
+            systemStatus.kernelVersion = kernelVersion;
+            log.debug('kernel version (' + kernelVersion + ')');
+         }
 
-				if (error) {
-					log.debug('firmware version detail not found');
-					firmwareVersion = '';
-				} else {
-					var data = stdout;
-					firmwareVersion = data.toString().slice(57,99);
-					systemStatus.firmwareVersion = firmwareVersion;
-					log.debug('firmware version (' + firmwareVersion + ')');
-				}
+         exec('sudo vcgencmd version', function (error, stdout, stderr) {
 
-				systemStatus.manufacturer = "SecurIoT.in";
-				systemStatus.sensorsAttached = 2;
+            if (error) {
+               log.debug('firmware version detail not found');
+               firmwareVersion = '';
+            } else {
+               var data = stdout;
+               firmwareVersion = data.toString().slice(57,99);
+               systemStatus.firmwareVersion = firmwareVersion;
+               log.debug('firmware version (' + firmwareVersion + ')');
+            }
 
-				redisClient.hmset ("SystemStatus",'SOFTWARE_VERSION_TAG', softwareVersion, 'FIRMWARE_VERSION_TAG', firmwareVersion, 'KERNEL_VERSION_TAG', kernelVersion, MANUFACTURER_TAG, "SecurIoT.in", function(err, reply) {
+            systemStatus.manufacturer = "SecurIoT.in";
+            systemStatus.sensorsAttached = 2;
 
-					if (err) {
-						log.debug('kernel version set failed');
-					}
-					azureDT.updateSystemStatus (systemStatus);
-					callback();
-				});
-			});
-		});
-	});
+            redisClient.hmset ("SystemStatus",'SOFTWARE_VERSION_TAG', softwareVersion, 'FIRMWARE_VERSION_TAG', firmwareVersion, 'KERNEL_VERSION_TAG', kernelVersion, MANUFACTURER_TAG, "SecurIoT.in", function(err, reply) {
+
+               if (err) {
+                  log.debug('kernel version set failed');
+               }
+               azureDT.updateSystemStatus (systemStatus);
+               callback();
+            });
+         });
+      });
+   });
 }
 
 //hardware version
-var appGetHardwareVersion = function(callback) 
+var appGetHardwareVersion = function(callback)
 {
    redisClient.hget("SystemStatus",HARDWARE_VERSION_TAG, function(err, reply) {
-   
+
       if (err || !reply) {
-      
+
          log.debug('hardware detail not set');
-      
+
          fs.readFile(SECURIOT_CONF_FILE, 'utf8', function(err, data) {
-         
+
             if (err || !data) {
-      
+
                log.debug('hardware detail not found, setting the default values');
-      
+
                hwDesc    = SECURIOT_DEFAULT_HARDWARE_DESCRIPTION;
                hwSerial  = SECURIOT_DEFAULT_HARDWARE_SERIAL;
                hwVersion = SECURIOT_DEFAULT_HARDWARE_VERSION;
 
             } else {
-      
+
                buf = data.toString();
                obj = JSON.parse(buf);
-      
+
                hwDesc    = obj.sysHwDesc;
                hwSerial  = SECURIOT_DEFAULT_HARDWARE_SERIAL;
                hwVersion = obj.sysHwVersion;
@@ -378,14 +373,14 @@ var appGetHardwareVersion = function(callback)
             log.debug('HW version (' + hwVersion + ', ' + hwDesc + '), Serial ' + hwSerial);
 
             redisClient.hmset("SystemStatus",HARDWARE_VERSION_TAG, hwVersion, function(err, reply) {
-            
+
                if (err) {
                   log.error('hardware version set failed');
-               } 
-               
+               }
+
                redisClient.hmset("SystemStatus",HARDWARE_DESCRIPTION_TAG,
                   hwDesc, function(err, reply) {
-               
+
                   if (err) {
                         log.error('hardware desciption set failed');
                   }
@@ -405,7 +400,7 @@ var appGetHardwareVersion = function(callback)
                hwDesc = SECURIOT_DEFAULT_HARDWARE_DESCRIPTION;
 
                redisClient.set(HARDWARE_DESCRIPTION_TAG, hwDesc, function(err, reply) {
-               
+
                   if (err) {
                     log.error('hardware desciption set failed');
                   }
@@ -461,7 +456,7 @@ var appSetHostName = function(cb)
         activeHostName = stdout;
         activeHostName = activeHostName.trim();
         activeHostName = activeHostName.replace(/\r?\n|\r/g, "");
-    
+
       }
 
       if (cb) { cb(); }
@@ -505,12 +500,12 @@ var appSetState = function()
       function(callback) {
 
          appGetWlanMacAddr(callback);
-      },  
-      
+      },
+
       function(callback) {
 
          appGetEthmacAddr(callback);
-      },  
+      },
 
       // check system status
       function(callback) {
@@ -519,24 +514,26 @@ var appSetState = function()
          callback();
       },
 
-      // Initialize local MQTT client
-		function(callback) {
-
-			cloudConnect.initializeLocalClient;
-			callback();
-		},
-
-		// Initialize cloud MQTT client 
-		function(callback) {
-			cloudConnect.initializeCloudClient;
-			callback();
-		},
 */
-		// initialize host name 
-		function(callback) {
-			appSetHostName(callback);
-		}
-	]);
+      // Initialize local MQTT client
+      function(callback) {
+
+         log.debug('Initializing local MQTT client');
+         cloudConnect.initializeLocalClient;
+         callback();
+      },
+
+      // Initialize cloud MQTT client
+      function(callback) {
+         log.debug('Initializing cloud MQTT client');
+         cloudConnect.initializeCloudClient;
+         callback();
+      },
+      // initialize host name
+      function(callback) {
+         appSetHostName(callback);
+      }
+   ]);
 }
 
 // catch SIGHUP events
