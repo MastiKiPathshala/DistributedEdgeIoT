@@ -445,6 +445,7 @@ var appSetHostName = function(cb)
 {
    var hostname  = 'SecurIoTGW';
 
+   log.debug('set host name');
    exec('hostname', function (error, stdout, stderr) {
 
       if (error != null) {
@@ -518,16 +519,12 @@ var appSetState = function()
       // Initialize local MQTT client
       function(callback) {
 
-         log.debug('Initializing local MQTT client');
-         cloudConnect.initializeLocalClient;
-         callback();
+         cloudConnect.initializeLocalClient(callback);
       },
 
       // Initialize cloud MQTT client
       function(callback) {
-         log.debug('Initializing cloud MQTT client');
-         cloudConnect.initializeCloudClient;
-         callback();
+         cloudConnect.initializeCloudClient(callback);
       },
       // initialize host name
       function(callback) {

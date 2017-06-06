@@ -49,9 +49,9 @@ var awsConnectCallback = function (err)
    }
 };
 
-var initializeLocalClient = function ()
+var initializeLocalClient = function (callback)
 {
-   log.debug('Local MQTT Client initialization initiated');
+   log.debug('Initializing local MQTT client');
 
    if (fs.existsSync('/etc/securiot.in/config.txt')) {
 
@@ -59,13 +59,14 @@ var initializeLocalClient = function ()
       parsedConfigData = JSON.parse(localConfigData);
 
       forwardingRule = parsedConfigData.gatewaySaurabhpi.forwarding_rules;
-      localClient  = mqtt.connect('mqtt://localhost')
+      localClient    = mqtt.connect('mqtt://localhost')
    }
+   if (callback) { callback(); }
 }
 
-var initializeCloudClient = function ()
+var initializeCloudClient = function (callback)
 {
-   log.debug('Cloud MQTT Client initialization initiated');
+   log.debug('Initializing cloud MQTT client');
 
    if (fs.existsSync('/etc/securiot.in/config.txt')) {
 
@@ -92,6 +93,8 @@ var initializeCloudClient = function ()
       break;
       }
    }
+
+   if (callback) { callback(); }
 }
 
 var gatewayUniqueId;
