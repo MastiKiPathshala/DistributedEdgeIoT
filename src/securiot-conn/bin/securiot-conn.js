@@ -289,8 +289,6 @@ var appSetState = function()
 
    redisUp = true;
 
-   network.online = false;
-
    async.series([
 
       function(callback) {
@@ -310,7 +308,8 @@ var appSetState = function()
       },
 
       function(callback) {
-          log.debug('SIGHUP received');
+         network.online = false;
+         checkInterfaceStatus();
       }
    ]);
 }
@@ -374,6 +373,10 @@ var checkInterfaceStatus = function()
          /* check ip DNS */
          checkDns();
       }
+   }
+
+   if (intfCheckTimer === undefined) {
+      intfCheckTimer = setInterval(checkInterfaceStatus, INTF_TIME);
    }
 
 }
@@ -447,5 +450,3 @@ var checkNet = function() {
       }
    });
 }
-
-intfCheckTimer = setInterval(checkInterfaceStatus, INTF_TIME);
