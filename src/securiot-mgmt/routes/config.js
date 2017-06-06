@@ -37,7 +37,7 @@ config.post('/svcRestart', function(req, res, next)
 });
 
 // REBOOT
-config.post('/SysRestart', function(req, res, next)
+config.post('/sysRestart', function(req, res, next)
 {
    if (upgrade_state != 0) {
 
