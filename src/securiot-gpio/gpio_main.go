@@ -241,7 +241,7 @@ func validateProtocolDataType (protocol, dataType string){
 			out1, err1 := exec.Command( "bash", "-c", "sudo gpsd /dev/ttyS0 -F /var/run/gpsd.sock").Output()
             _,_ = out1,err1
 			
-		    GpsSensorData ()
+		    GpsSensorData (matchDataType)
 			
 		case "HY":
 		    

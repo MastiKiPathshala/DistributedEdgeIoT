@@ -22,9 +22,15 @@ import (
 	"os/exec"
 	"time"
  )
+ 
+var sensorDataType string
 
-func GpsSensorData(){
+func GpsSensorData(matchDataType string){
 
+	sensorDataType = matchDataType
+	TakeGpsData ()
+}
+func TakeGpsData () {
     out2, err := exec.Command( "bash", "-c", "gpspipe -w -n 8 | grep -m 1 TPV").Output()
    
     if err != nil {
@@ -43,18 +49,60 @@ func GpsSensorData(){
 		fmt.Println("error:", err2)
 		
 	}
-	
+
 	lat := latlon["lat"]
-	log.Critical("latitude critical", lat)
-    //fmt.Println("latitude ", lat)
 	
 	lon := latlon["lon"]
-	log.Debug("longitude debug", lon)
-    //fmt.Println("longitude ", lon)
 	
-	if token := client.Publish("gps-data", 0, false, out2); token.Error() != nil {
+	if lat != nil && lon != nil {
+
+		latStr := fmt.Sprint(lat.(float64)+10.0)
+		//fmt.Println("latitude ", latStr)
+	
+		log.Critical("latitude critical", latStr)
+	
+		lonStr := fmt.Sprint(lon.(float64)+12.0)
+	
+		//fmt.Println("longitude ", lonStr)
+		log.Debug("longitude debug", lonStr)
+	
+		gpsData := latStr+"-"+lonStr+"-"+sensorDataType
+	
+		if token := client.Publish("gps-data", 0, false, gpsData); token.Error() != nil {
 		    
-		fmt.Println(token.Error())
+			fmt.Println(token.Error())
+		}
+	
+		temperatureData := latStr+"-"+lonStr+"-"+"temperature"
+	
+		if token := client.Publish("temp-data", 0, false, temperatureData); token.Error() != nil {
+		    
+			fmt.Println(token.Error())
+		}
+	
+		humidityData := latStr+"-"+lonStr+"-"+"humidity"
+	
+		if token := client.Publish("humid-data", 0, false, humidityData); token.Error() != nil {
+		    
+			fmt.Println(token.Error())
+		}
+		no2Data := latStr+"-"+lonStr+"-"+"no2"
+	
+		if token := client.Publish("no2-data", 0, false, no2Data); token.Error() != nil {
+		    
+			fmt.Println(token.Error())
+		}
+		so2Data := latStr+"-"+lonStr+"-"+"so2"
+	
+		if token := client.Publish("so2-data", 0, false, so2Data); token.Error() != nil {
+		    
+			fmt.Println(token.Error())
+		}
+	}else{
+
+		fmt.Println("getting nil value for lat and lon")
 	}
-	time.AfterFunc(1000*time.Millisecond, GpsSensorData)
+	
+	time.AfterFunc(1000*time.Millisecond, TakeGpsData)
 }
+
