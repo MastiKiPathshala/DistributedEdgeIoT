@@ -417,7 +417,7 @@ var checkNet = function() {
    var data_str = /bytes from/i;
    var stat_str = /ping statistics/i;
 
-   var IP = 'azure.microsoft.com';
+   var IP = 'www.microsoft.com';
 
    log.debug('PING check');
 
