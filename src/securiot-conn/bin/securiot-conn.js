@@ -22,9 +22,9 @@ var usbDetectCounter = 0;
 var INTF_TIME     = 50000;
 var USB_INTF_TIME = 10000;
 
-var intfCheck   = false;
-var dnsUpState  = false;
-var intfUpState = false;
+var intfCheck     = false;
+var dnsUpState    = false;
+var intfUpState   = false;
 
 BASE_MODULE  = 'securiot';
 HOST_HOME    = '/home/Kat@ppa';
@@ -289,6 +289,8 @@ var appSetState = function()
 
    redisUp = true;
 
+   network.online = false;
+
    async.series([
 
       function(callback) {
@@ -324,6 +326,7 @@ var checkInterfaceStatus = function()
 {
    var ipAddrs = [];
 
+
    if (intfCheck === false) {
 
       intfCheck   = true;
@@ -357,6 +360,14 @@ var checkInterfaceStatus = function()
          log.debug('INTERFACE DOWN' + JSON.stringify(ipAddrs));
          intfCheck   = false;
          intfUpState = false;
+         if (network.online === true) {
+         
+            network.online = false;
+            network.emit('offline');
+         } else {
+            // nothing
+         }
+
       } else {
 
          log.debug('INTERFACE OK' + JSON.stringify(ipAddrs));
@@ -374,10 +385,21 @@ var checkDns = function()
     require('dns').lookup('www.microsoft.com',function(err) {
 
         if (err && err.code == "ENOTFOUND") {
+
            log.debug('DNS FAIL');
            intfCheck  = false;
            dnsUpState = false;
+
+           if (network.online === true) {
+           
+              network.online = false;
+              network.emit('offline');
+           } else {
+              // nothing
+           }
+
         } else {
+
            log.debug('DNS OK');
            checkNet();
         }
@@ -386,17 +408,18 @@ var checkDns = function()
 
 var checkNet = function() {
 
+   var delay    = 2; // in seconds
+   var count    = 5;
+
    var data_str = /bytes from/i;
    var stat_str = /ping statistics/i;
-   var interval = 2; // in seconds
-   var count = 5;
-   var IP = '8.8.8.8';
+
+   var IP = 'azure.microsoft.com';
 
    log.debug('PING check');
 
-   network.online = false;
 
-   var proc = spawn('ping', ['-v', '-n', '-c', count,'-i', interval, IP]);
+   var proc = spawn('ping', ['-v', '-n', '-c', count,'-i', delay, IP]);
 
    proc.stdout.on('data', function (data) {
 
@@ -413,6 +436,7 @@ var checkNet = function() {
            network.online = true;
            network.emit('online');
          }
+
       } else if (network.online === true) {
 
          intfCheck  = false;
