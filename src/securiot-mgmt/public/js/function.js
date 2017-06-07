@@ -293,7 +293,7 @@ var hostNameUpdate = function()
 
 var softwareUpgradeConfirm = function()
 {
-   var get_url = '/api/upgrade/';
+   var get_url = '/api/upgrade';
    var upgradeSwVersionId = $('#upgradeSwVersionId').val();
 
    console.log('upgrade to ' + upgradeSwVersionId);
@@ -306,7 +306,7 @@ var softwareUpgradeConfirm = function()
       url:get_url
    }).done(function(data) {
 
-      if (data.success != 0) {
+      if (data.success != true) {
           alert('a software upgrade is currently in progress...');
           return;
       }
