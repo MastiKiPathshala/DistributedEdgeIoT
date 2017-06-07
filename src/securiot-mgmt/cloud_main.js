@@ -49,9 +49,9 @@ var awsConnectCallback = function (err)
    }
 };
 
-var initializeLocalClient = function (callback)
+var mqttLocalClientInit = function(callback)
 {
-   log.debug('Initializing local MQTT client');
+   log.debug('MQTT local client init');
 
    if (fs.existsSync('/etc/securiot.in/config.txt')) {
 
@@ -64,9 +64,9 @@ var initializeLocalClient = function (callback)
    if (callback) { callback(); }
 }
 
-var initializeCloudClient = function (callback)
+var mqttCloudClientInit = function (callback)
 {
-   log.debug('Initializing cloud MQTT client');
+   log.debug('MQTT cloud client init');
 
    if (fs.existsSync('/etc/securiot.in/config.txt')) {
 
@@ -75,7 +75,7 @@ var initializeCloudClient = function (callback)
       switch (serverType) {
 
       case "azure":
-         log.info('Cloud Server is AZURE');
+         log.info('AZURE Cloud Server');
          iotHubName       = parsedConfigData.gatewaySaurabhpi.ServerConfig.data.AzureConfig.IoTHub;;
          protocol         = parsedConfigData.gatewaySaurabhpi.ServerConfig.data.AzureConfig.Protocol;
          deviceId         = parsedConfigData.gatewaySaurabhpi.ServerConfig.data.AzureConfig.DeviceId;
@@ -90,6 +90,7 @@ var initializeCloudClient = function (callback)
 
       case "aws":
          // Placeholder for now
+         log.info('AWS Cloud Server');
       break;
       }
    }
@@ -297,5 +298,5 @@ var sendToCloud = function(message)
 }
 
 module.exports = cloudConnect;
-module.exports.initializeLocalClient = initializeLocalClient;
-module.exports.initializeCloudClient = initializeCloudClient;
+module.exports.mqttLocalClientInit = mqttLocalClientInit;
+module.exports.mqttCloudClientInit = mqttCloudClientInit;

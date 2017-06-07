@@ -91,7 +91,7 @@ var app = express();
 // reset the max-listener, to avoid for now.
 require('events').EventEmitter.prototype._maxListeners = 0;
 
-log.debug('start');
+log.debug('service start');
 
 /* Redis Client */
 redisClient = redis.createClient();
@@ -519,12 +519,12 @@ var appSetState = function()
       // Initialize local MQTT client
       function(callback) {
 
-         cloudConnect.initializeLocalClient(callback);
+         cloudConnect.mqttLocalClientInit(callback);
       },
 
       // Initialize cloud MQTT client
       function(callback) {
-         cloudConnect.initializeCloudClient(callback);
+         cloudConnect.mqttCloudClientInit(callback);
       },
       // initialize host name
       function(callback) {
