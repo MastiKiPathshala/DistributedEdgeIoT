@@ -12,8 +12,8 @@ var childProcess = require('child_process');
 // router module
 var config = express.Router();
 
-BUILD_SVR    = 'build.mastikipathshala.com';
-BUILD_URL    = BUILD_SVR + '/' +  BASE_MODULE + '/';
+BUILD_SVR       = 'build.mastikipathshala.com';
+BUILD_BASE_URL  = BUILD_SVR + '/' +  BASE_MODULE + '/';
 
 //RESTART
 
@@ -228,18 +228,22 @@ config.post('/devName',function(req,res,next) {
 });
 
 config.get('/kernelVersion', function(req, res, next) {
+   log.debug('kernelVersion:' + fwVersion);
    res.json({success: true, kernelVersion: kernelVersion.toString()});
 });
 
 config.get('/fwVersion', function(req, res, next) {
+   log.debug('fwVersion:' + fwVersion);
    res.json({success: true, fwVersion: fwVersion.toString()});
 });
 
 config.get('/wlanMacAddr', function(req, res, next) {
+   log.debug('wlanMacAddr:' + fwVersion);
    res.json({success: true, wlanMacAddr: wlanMacAddr.toString()});
 });
 
 config.get('/ethMacAddr', function(req, res, next) {
+   log.debug('ethMacAddr:' + fwVersion);
    res.json({success: true, ethMacAddr: ethMacAddr.toString()});
 });
 

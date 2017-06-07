@@ -55,7 +55,7 @@ hwVersion = '';
 activeVersion = '';
 upgradeVersion = '';
 
-kernVersion = '';
+kernelVersion = '';
 fwVersion = '';
 
 ethMacAddr = '';
@@ -596,12 +596,12 @@ app.use(function (req, res, next) {
 });
 
 app.use('/', routes);
-app.use('/api/upgrade', upgrade);
-app.use('/api/config', config);
+app.use('/api/upgrade/', upgrade);
+app.use('/api/config/', config);
 app.use('/api/system/v1.0', system);
-//app.use('/api/stats', statistics);
-//app.use('/api/diag', diagnostics);
-//app.use('/api/analytics/v1.0',analytics);
+//app.use('/api/stats/', statistics);
+//app.use('/api/diag/', diagnostics);
+//app.use('/api/analytics/v1.0/',analytics);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {

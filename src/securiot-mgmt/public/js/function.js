@@ -235,11 +235,11 @@ var getLatestSwVersionId = function()
 {
    var get_url = '/api/config/latestSwVersionId'
 
-   document.getElementById("swVersionBtn").style.display = 'none';
+   //document.getElementById("upgradeVersionIdBtn").style.display = 'none';
 
    $.ajax({
 
-      method: 'POST',
+      method: 'GET',
       url: get_url
    }).done(function(data) {
 
@@ -391,6 +391,7 @@ var updateInit = function()
    var hwInfo;
    var swInfo;
 
+   console.log(get_url);
    $.ajax({
       method: 'GET',
       url: get_url
@@ -399,6 +400,7 @@ var updateInit = function()
    });
 
    var get_url = '/api/config/hwVersionId';
+   console.log(get_url);
    $.ajax({
       method: 'GET',
       url: get_url
@@ -407,6 +409,7 @@ var updateInit = function()
    });
 
    var get_url = '/api/config/hwDesc';
+   console.log(get_url);
    $.ajax({
       method: 'GET',
       url: get_url
@@ -415,14 +418,17 @@ var updateInit = function()
    });
 
    var get_url = '/api/config/kernelVersion';
+   console.log(get_url);
    $.ajax({
        method: 'GET',
        url: get_url
    }).done(function(data) {
+       console.log(data);
        $("#kernelVersion").text(data.kernelVersion);
    });
 
    var get_url = '/api/config/fwVersion';
+   console.log(get_url);
    $.ajax({
       method: 'GET',
       url: get_url
@@ -431,6 +437,7 @@ var updateInit = function()
    });
 
    var get_url = '/api/config/wlanMacAddr';
+   console.log(get_url);
    $.ajax({
       method: 'GET',
       url: get_url
@@ -438,6 +445,7 @@ var updateInit = function()
       $("#wlanMacAddr").text(data.wlanMacAddr);
    });
 
+   console.log(get_url);
    var get_url = '/api/config/ethMacAddr';
    $.ajax({
       method: 'GET',
