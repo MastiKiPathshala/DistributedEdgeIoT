@@ -17,12 +17,15 @@ var os       = require("os");
 var exec     = require('child_process').exec;
 var mqtt     = require('mqtt')
 var moment   = require('moment-timezone');
+
+var azureIoT = require('azure-iot-device');
 var azureDM  = require('./cloud_azure_directmethod');
 var azureDT  = require('./cloud_azure_devicetwin');
 var azureC2D = require('./cloud_azure_c2dmessage');
-var express  = require('express');
 
-var cloudConnect = express.Router();
+var awsIoT   = require('aws-iot-device-sdk');
+var awsTS    = require('./cloud_aws_thingshadow');
+var awsDM    = require('./cloud_aws_directmessage');
 
 var azureConnectCallback = function (err)
 {
@@ -36,16 +39,74 @@ var azureConnectCallback = function (err)
       cloudClient.getTwin(azureDT.onConfigChange);
       cloudClient.onDeviceMethod('firmwareUpdate', azureDM.onFirmwareUpdate);
       cloudClient.onDeviceMethod('reboot', azureDM.onReboot);
-      //cloudClient.onDeviceMethod('factoryReset', azureDM.onFactoryReset);
+      cloudClient.onDeviceMethod('factoryReset', azureDM.onFactoryReset);
+      cloudClient.onDeviceMethod('remoteDiagnostic', azureDM.onRemoteDiagnostic);
    }
 };
 
 var awsConnectCallback = function (err)
 {
+	if (err) {
+		log.error('AWS Cloud Client connection failed : ' + err);
+	} else {
+		log.debug('AWS Cloud Client connected');
+		awsRemoteConfigTopic = awsBaseTopic+'/topic/remoteconfig';
+		cloudClient.on ('update', awsTS.updateCallback);
+		cloudClient.on('status', awsTS.statusCallback);
+		cloudClient.on('message', awsDM.messageCallback);
+		cloudClient.register (iotHubName, { ignoreDeltas: true },
+			function (err, failedTopics) {
+				if ((err === undefined) && (failedTopics === undefined)) {
+					cloudClient.subscribe (awsRemoteConfigTopic);
+				}
+			}
+		);
+	}
+};
+
+var awsReconnectCallback = function (err)
+{
+	if (err) {
+		log.error('AWS Cloud Client reconnection failed : ' + err);
+	} else {
+		log.debug('AWS Cloud Client reconnected');
+		awsRemoteConfigTopic = awsBaseTopic+'/topic/remoteconfig';
+		cloudClient.on ('update', awsTS.updateCallback);
+		cloudClient.on('status', awsTS.statusCallback);
+		cloudClient.register (iotHubName, { ignoreDeltas: true },
+			function (err, failedTopics) {
+				if ((err === undefined) && (failedTopics === undefined)) {
+					cloudClient.subscribe (awsRemoteConfigTopic);
+				}
+			}
+		);
+   }
+};
+
+var awsCloseCallback = function (err)
+{
    if (err) {
-      log.error('AWS Cloud Client connection failed : ' + err);
+      log.error('AWS Cloud Client close failed : ' + err);
    } else {
-      log.debug('AWS Cloud Client connected');
+      log.debug('AWS Cloud Client closed');
+   }
+};
+
+var awsOfflineCallback = function (err)
+{
+   if (err) {
+      log.error('AWS Cloud Client offline failed : ' + err);
+   } else {
+      log.debug('AWS Cloud Client became offline');
+   }
+};
+
+var awsErrorCallback = function (err)
+{
+   if (err) {
+      log.error('AWS Cloud Client error failed : ' + err);
+   } else {
+      log.debug('AWS Cloud Client has error');
    }
 };
 
@@ -84,18 +145,35 @@ var mqttCloudClientInit = function (callback)
          clientFromConnectionString = require('azure-iot-device-'+protocol).clientFromConnectionString;
 
          cloudClient = clientFromConnectionString(connectionString);
-         var Message = require('azure-iot-device').Message;
-         cloudClient.open(azureConnectCallback);
+         var Message = azureIoT.Message;
+         cloudClient.open (azureConnectCallback);
       break;
 
-      case "aws":
-         // Placeholder for now
-         log.info('AWS Cloud Server');
-      break;
-      }
-   }
+      case "AWS":
+				log.info('Cloud Server is AWS');
+				iotHubName = parsedConfigData.gatewaySaurabhpi.ServerConfig.data.AWSConfig.DeviceId;
+				host = parsedConfigData.gatewaySaurabhpi.ServerConfig.data.AWSConfig.Device;
+				protocol = parsedConfigData.gatewaySaurabhpi.ServerConfig.data.AWSConfig.Protocol;
+				accessKey = parsedConfigData.gatewaySaurabhpi.ServerConfig.data.AWSConfig.AccessKey;
+				cloudClient = awsIoT.thingShadow ({
+					keyPath: "/etc/ssl/certs/"+iotHubName+".private.key",
+					certPath: "/etc/ssl/certs/"+iotHubName+".cert.pem",
+					caPath: "/etc/ssl/certs/"+accessKey,
+					clientId: iotHubName,
+					keepAlive: 45,
+					protocol: protocol,
+					host: host});
 
-   if (callback) { callback(); }
+				awsBaseTopic = 'SecurIoT.in/thing/' + iotHubName;
+				cloudClient.on('connect', awsConnectCallback);
+				cloudClient.on('close', awsCloseCallback);
+				cloudClient.on('reconnect', awsReconnectCallback);
+				cloudClient.on('offline', awsOfflineCallback);
+				cloudClient.on('error', awsErrorCallback);
+		break;
+		}
+	}
+	if (callback) { callback(); }
 }
 
 var gatewayUniqueId;
@@ -292,11 +370,23 @@ var sendToCloud = function(message)
       });
       break;
 
-   case "aws":
+   case "AWS":
+   break;
 
    }
 }
 
-module.exports = cloudConnect;
+var updateSystemStatus = function (systemStatus) {
+	switch (serverType) {
+		case "azure":
+			azureDT.updateSystemStatus (systemStatus);
+			break;
+		case "AWS":
+			awsTS.updateSystemStatus (systemStatus);
+			break;
+	}
+}
+
 module.exports.mqttLocalClientInit = mqttLocalClientInit;
 module.exports.mqttCloudClientInit = mqttCloudClientInit;
+module.exports.updateSystemStatus  = updateSystemStatus;

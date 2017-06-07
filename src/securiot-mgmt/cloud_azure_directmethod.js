@@ -128,6 +128,31 @@ var applyImage = function(twin, imageData, callback) {
   }, 4000);
 }
 
+exports.updateRebootStatus = function (reasonStr) {
+	// Report the reboot before the physical restart
+	var date = new Date();
+	var patch = {
+		SystemStatus : {
+			reboot: {
+				lastReboot: date.toISOString(),
+				rebootReason: reasonStr
+			}
+		}
+	};
+	// Get device Twin
+	cloudClient.getTwin(function(err, twin) {
+		if (err) {
+            console.error('could not get twin');
+		} else {
+			log.debug('twin acquired');
+			twin.properties.reported.update(patch, function(err) {
+				if (err) throw err;
+				log.debug('Device reboot twin state reported')
+			});
+		}
+	});
+}
+
 exports.onFirmwareUpdate = function(request, response) {
 
   // Respond the cloud app for the direct method
@@ -160,35 +185,11 @@ exports.onFirmwareUpdate = function(request, response) {
   });
 }
 
-exports.updateRebootStatus = function (reasonStr) {
-	// Report the reboot before the physical restart
-	var date = new Date();
-	var patch = {
-		SystemStatus : {
-			reboot: {
-				lastReboot: date.toISOString(),
-				rebootReason: reasonStr
-			}
-		}
-	};
-	// Get device Twin
-	cloudClient.getTwin(function(err, twin) {
-		if (err) {
-            console.error('could not get twin');
-		} else {
-			log.debug('twin acquired');
-			twin.properties.reported.update(patch, function(err) {
-				if (err) throw err;
-				log.debug('Device reboot twin state reported')
-			});
-		}
-	});
-}
-
 exports.onReboot = function(request, response) {
-
+    
+	log.debug ("Method: " + request.method + ", Payload: " + request.payload);
     // Respond the cloud app for the direct method
-    response.send(200, 'Reboot started', function(err) {
+	response.send(200, 'Reboot started', function(err) {
         if (!err) {
             console.error('An error occured when sending a method response:\n' + err.toString());
         } else {
@@ -198,3 +199,27 @@ exports.onReboot = function(request, response) {
 	exports.updateRebootStatus ("IoTHub triggered reboot");
 	system.restartSystem ();
 };
+
+exports.onFactoryReset = function (request, response)
+{
+	log.debug ("Method: " + request.method + ", Payload: " + request.payload);
+	response.send(200, 'Factory Reset started', function(err) {
+        if (!err) {
+            console.error('An error occured when sending a method response:\n' + err.toString());
+        } else {
+            log.debug('Response to method \'' + request.methodName + '\' sent successfully.');
+        }
+	});
+}
+
+exports.onRemoteDiagnostic = function (request, response)
+{
+	log.debug ("Method: " + request.method + ", Payload: " + request.payload);
+	response.send(200, 'Remote Diagnostic started', function(err) {
+		if (!err) {
+			console.error('An error occured when sending a method response:\n' + err.toString());
+		} else {
+			log.debug('Response to method \'' + request.methodName + '\' sent successfully.');
+		}
+	});
+}

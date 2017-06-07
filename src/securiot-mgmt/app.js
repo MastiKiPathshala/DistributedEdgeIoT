@@ -12,7 +12,6 @@ var express      = require('express');
 var bodyParser   = require('body-parser');
 var cookieParser = require('cookie-parser');
 var cloudConnect = require ('./cloud_main');
-var azureDT = require ('./cloud_azure_devicetwin');
 
 BASE_MODULE  = 'securiot';
 HOST_HOME    = '/home/Kat@ppa';
@@ -37,12 +36,12 @@ SECURIOT_DEFAULT_HARDWARE_SERIAL = "DHB-YY-XXXXX";
 
 SECURIOT_MAINTENANCE_TIMEOUT = (60*60000) // one hour
 
-SOFTWARE_VERSION_TAG   = 'softwareVersion';
-KERNEL_VERSION_TAG   = 'kernelVersion';
-HARDWARE_VERSION_TAG   = 'hardwareVersion';
-FIRMWARE_VERSION_TAG   = 'firmwareVersion';
-HARDWARE_SERIAL_TAG   = 'hardwareSerial';
-MANUFACTURER_TAG    = 'manufacturer';
+SOFTWARE_VERSION_TAG	= 'softwareVersion';
+KERNEL_VERSION_TAG		= 'kernelVersion';
+HARDWARE_VERSION_TAG	= 'hardwareVersion';
+FIRMWARE_VERSION_TAG	= 'firmwareVersion';
+HARDWARE_SERIAL_TAG		= 'hardwareSerial';
+MANUFACTURER_TAG		= 'manufacturer';
 
 //Global variables
 user = '';
@@ -329,7 +328,7 @@ var appUpdateSystemStatus = function(callback)
                if (err) {
                   log.debug('kernel version set failed');
                }
-               azureDT.updateSystemStatus (systemStatus);
+               cloudConnect.updateSystemStatus (systemStatus);
                callback();
             });
          });
@@ -485,11 +484,6 @@ var appSetState = function()
          appSetSelfPid(callback);
       },
 
-      // software version
-      function(callback) {
-
-         appUpdateSystemStatus(callback);
-      },
 /*
       // hardware version
       function(callback) {
@@ -525,6 +519,11 @@ var appSetState = function()
       // Initialize cloud MQTT client
       function(callback) {
          cloudConnect.mqttCloudClientInit(callback);
+      },
+      // software version
+      function(callback) {
+
+         appUpdateSystemStatus(callback);
       },
       // initialize host name
       function(callback) {
