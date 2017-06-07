@@ -3,7 +3,7 @@
 
 /* define name for web-server */
 
-WEB_SVR_SVC      = 'securiot-web';
+WEB_SVR_SVC      = 'securiot-mgmt';
 WEB_SVR_SVC_NAME = WEB_SVR_SVC + '-service';
 WEB_SVR_SVC_PID  = WEB_SVR_SVC + '-pid';
 WEB_SVR_SVC_MSG  = WEB_SVR_SVC + '-upgrade-msg';

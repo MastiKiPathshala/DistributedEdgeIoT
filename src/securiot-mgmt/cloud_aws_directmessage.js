@@ -52,7 +52,7 @@ var updateRebootStatus = function (reasonStr)
 		}
 	}
 	};
-	cloudClientToken = cloudClient.update (iotHubName, myThingState);
+	cloudClientToken = cloudClient.update (deviceId, myThingState);
 
 	if (cloudClientToken === null) {
 		log.debug ("Failed to update System status, AttemptCount: " + updateAttemptCount);

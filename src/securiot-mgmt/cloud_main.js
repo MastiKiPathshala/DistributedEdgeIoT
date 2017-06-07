@@ -54,7 +54,7 @@ var awsConnectCallback = function (err)
 		cloudClient.on ('update', awsTS.updateCallback);
 		cloudClient.on('status', awsTS.statusCallback);
 		cloudClient.on('message', awsDM.messageCallback);
-		cloudClient.register (iotHubName, { ignoreDeltas: true },
+		cloudClient.register (deviceId, { ignoreDeltas: true },
 			function (err, failedTopics) {
 				if ((err === undefined) && (failedTopics === undefined)) {
 					cloudClient.subscribe (awsRemoteConfigTopic);
@@ -73,7 +73,7 @@ var awsReconnectCallback = function (err)
 		awsRemoteConfigTopic = awsBaseTopic+'/topic/remoteconfig';
 		cloudClient.on ('update', awsTS.updateCallback);
 		cloudClient.on('status', awsTS.statusCallback);
-		cloudClient.register (iotHubName, { ignoreDeltas: true },
+		cloudClient.register (deviceId, { ignoreDeltas: true },
 			function (err, failedTopics) {
 				if ((err === undefined) && (failedTopics === undefined)) {
 					cloudClient.subscribe (awsRemoteConfigTopic);
@@ -150,21 +150,21 @@ var mqttCloudClientInit = function (callback)
       break;
 
       case "AWS":
-				log.info('Cloud Server is AWS');
-				iotHubName = parsedConfigData.gatewaySaurabhpi.ServerConfig.data.AWSConfig.DeviceId;
-				host = parsedConfigData.gatewaySaurabhpi.ServerConfig.data.AWSConfig.Device;
+				log.info('AWS Cloud Server');
+				iotHubName = parsedConfigData.gatewaySaurabhpi.ServerConfig.data.AWSConfig.IoTHub;
 				protocol = parsedConfigData.gatewaySaurabhpi.ServerConfig.data.AWSConfig.Protocol;
+				deviceId = parsedConfigData.gatewaySaurabhpi.ServerConfig.data.AWSConfig.DeviceId;
 				accessKey = parsedConfigData.gatewaySaurabhpi.ServerConfig.data.AWSConfig.AccessKey;
 				cloudClient = awsIoT.thingShadow ({
-					keyPath: "/etc/ssl/certs/"+iotHubName+".private.key",
-					certPath: "/etc/ssl/certs/"+iotHubName+".cert.pem",
+					keyPath: "/etc/ssl/certs/"+deviceId+".private.key",
+					certPath: "/etc/ssl/certs/"+deviceId+".cert.pem",
 					caPath: "/etc/ssl/certs/"+accessKey,
-					clientId: iotHubName,
+					clientId: deviceId,
 					keepAlive: 45,
 					protocol: protocol,
-					host: host});
+					host: iotHubName});
 
-				awsBaseTopic = 'SecurIoT.in/thing/' + iotHubName;
+				awsBaseTopic = 'SecurIoT.in/thing/' + deviceId;
 				cloudClient.on('connect', awsConnectCallback);
 				cloudClient.on('close', awsCloseCallback);
 				cloudClient.on('reconnect', awsReconnectCallback);

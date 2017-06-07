@@ -36,18 +36,8 @@ exports.updateSystemStatus = function (systemStatus) {
 		}
 	}
 }
-/*
-	myThingState["reported"]["SystemStatus"]["softwareVersion"] = systemStatus.softwareVersion;
-	myThingState["reported"]["SystemStatus"]["kernelVersion"] = systemStatus.kernelVersion;
-	myThingState["reported"]["SystemStatus"]["hardwareVersion"] = systemStatus.hardwareVersion;
-	myThingState["reported"]["SystemStatus"]["firmwareVersion"] = systemStatus.firmwareVersion;
-	myThingState["reported"]["SystemStatus"]["manufacturer"] = systemStatus.manufacturer;
-	myThingState["reported"]["SystemStatus"]["sensorsAttached"] = systemStatus.sensorsAttached;
-	myThingState["reported"]["SystemStatus"]["lastBootup"] = systemStatus.lastBootup;
-*/
 
-	//log.debug ("Name: " + iotHubName + ", State: " + JSON.stringify(myThingState));
-	cloudClientToken = cloudClient.update (iotHubName, myThingState);
+	cloudClientToken = cloudClient.update (deviceId, myThingState);
 
 	if (cloudClientToken === null) {
 		log.debug ("Failed to update System status, AttemptCount: " + updateAttemptCount);
