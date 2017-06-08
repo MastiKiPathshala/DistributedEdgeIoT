@@ -27,6 +27,15 @@ var awsIoT   = require('aws-iot-device-sdk');
 var awsTS    = require('./cloud_aws_thingshadow');
 var awsDM    = require('./cloud_aws_directmessage');
 
+var uniqueGetwayId;
+var cloudServerType;
+
+var so2Count   = 0;
+var no2Count   = 0;
+var gpsCount   = 0;
+var tempCount  = 0;
+var humidCount = 0;
+
 var azureConnectCallback = function (err)
 {
    if (err) {
@@ -42,46 +51,46 @@ var azureConnectCallback = function (err)
       cloudClient.onDeviceMethod('factoryReset', azureDM.onFactoryReset);
       cloudClient.onDeviceMethod('remoteDiagnostic', azureDM.onRemoteDiagnostic);
    }
-};
+}
 
 var awsConnectCallback = function (err)
 {
-	if (err) {
-		log.error('AWS Cloud Client connection failed : ' + err);
-	} else {
-		log.debug('AWS Cloud Client connected');
-		awsRemoteConfigTopic = awsBaseTopic+'/topic/remoteconfig';
-		cloudClient.on ('update', awsTS.updateCallback);
-		cloudClient.on('status', awsTS.statusCallback);
-		cloudClient.on('message', awsDM.messageCallback);
-		cloudClient.register (deviceId, { ignoreDeltas: true },
-			function (err, failedTopics) {
-				if ((err === undefined) && (failedTopics === undefined)) {
-					cloudClient.subscribe (awsRemoteConfigTopic);
-				}
-			}
-		);
-	}
-};
+   if (err) {
+      log.error('AWS Cloud Client connection failed : ' + err);
+   } else {
+      log.debug('AWS Cloud Client connected');
+      awsRemoteConfigTopic = awsBaseTopic+'/topic/remoteconfig';
+      cloudClient.on ('update', awsTS.updateCallback);
+      cloudClient.on('status', awsTS.statusCallback);
+      cloudClient.on('message', awsDM.messageCallback);
+      cloudClient.register (deviceId, { ignoreDeltas: true },
+         function (err, failedTopics) {
+            if ((err === undefined) && (failedTopics === undefined)) {
+               cloudClient.subscribe (awsRemoteConfigTopic);
+            }
+         }
+      );
+   }
+}
 
 var awsReconnectCallback = function (err)
 {
-	if (err) {
-		log.error('AWS Cloud Client reconnection failed : ' + err);
-	} else {
-		log.debug('AWS Cloud Client reconnected');
-		awsRemoteConfigTopic = awsBaseTopic+'/topic/remoteconfig';
-		cloudClient.on ('update', awsTS.updateCallback);
-		cloudClient.on('status', awsTS.statusCallback);
-		cloudClient.register (deviceId, { ignoreDeltas: true },
-			function (err, failedTopics) {
-				if ((err === undefined) && (failedTopics === undefined)) {
-					cloudClient.subscribe (awsRemoteConfigTopic);
-				}
-			}
-		);
+   if (err) {
+      log.error('AWS Cloud Client reconnection failed : ' + err);
+   } else {
+      log.debug('AWS Cloud Client reconnected');
+      awsRemoteConfigTopic = awsBaseTopic+'/topic/remoteconfig';
+      cloudClient.on ('update', awsTS.updateCallback);
+      cloudClient.on('status', awsTS.statusCallback);
+      cloudClient.register (deviceId, { ignoreDeltas: true },
+         function (err, failedTopics) {
+            if ((err === undefined) && (failedTopics === undefined)) {
+               cloudClient.subscribe (awsRemoteConfigTopic);
+            }
+         }
+      );
    }
-};
+}
 
 var awsCloseCallback = function (err)
 {
@@ -90,7 +99,7 @@ var awsCloseCallback = function (err)
    } else {
       log.debug('AWS Cloud Client closed');
    }
-};
+}
 
 var awsOfflineCallback = function (err)
 {
@@ -99,7 +108,7 @@ var awsOfflineCallback = function (err)
    } else {
       log.debug('AWS Cloud Client became offline');
    }
-};
+}
 
 var awsErrorCallback = function (err)
 {
@@ -108,11 +117,11 @@ var awsErrorCallback = function (err)
    } else {
       log.debug('AWS Cloud Client has error');
    }
-};
+}
 
 var mqttLocalClientInit = function(callback)
 {
-   log.debug('MQTT local client init');
+   log.debug('MQTT local broker init');
 
    if (fs.existsSync('/etc/securiot.in/config.txt')) {
 
@@ -131,9 +140,9 @@ var mqttCloudClientInit = function (callback)
 
    if (fs.existsSync('/etc/securiot.in/config.txt')) {
 
-      serverType = parsedConfigData.gatewaySaurabhpi.ServerConfig.data.ServerType
+      cloudServerType = parsedConfigData.gatewaySaurabhpi.ServerConfig.data.ServerType
 
-      switch (serverType) {
+      switch (cloudServerType) {
 
       case "azure":
          log.info('AZURE Cloud Server');
@@ -150,169 +159,163 @@ var mqttCloudClientInit = function (callback)
       break;
 
       case "AWS":
-				log.info('AWS Cloud Server');
-				iotHubName = parsedConfigData.gatewaySaurabhpi.ServerConfig.data.AWSConfig.IoTHub;
-				protocol = parsedConfigData.gatewaySaurabhpi.ServerConfig.data.AWSConfig.Protocol;
-				deviceId = parsedConfigData.gatewaySaurabhpi.ServerConfig.data.AWSConfig.DeviceId;
-				accessKey = parsedConfigData.gatewaySaurabhpi.ServerConfig.data.AWSConfig.AccessKey;
-				cloudClient = awsIoT.thingShadow ({
-					keyPath: "/etc/ssl/certs/"+deviceId+".private.key",
-					certPath: "/etc/ssl/certs/"+deviceId+".cert.pem",
-					caPath: "/etc/ssl/certs/"+accessKey,
-					clientId: deviceId,
-					keepAlive: 45,
-					protocol: protocol,
-					host: iotHubName});
+            log.info('AWS Cloud Server');
+            iotHubName  = parsedConfigData.gatewaySaurabhpi.ServerConfig.data.AWSConfig.IoTHub;
+            protocol    = parsedConfigData.gatewaySaurabhpi.ServerConfig.data.AWSConfig.Protocol;
+            deviceId    = parsedConfigData.gatewaySaurabhpi.ServerConfig.data.AWSConfig.DeviceId;
+            accessKey   = parsedConfigData.gatewaySaurabhpi.ServerConfig.data.AWSConfig.AccessKey;
+            cloudClient = awsIoT.thingShadow ({
+               keyPath: "/etc/ssl/certs/"+deviceId+".private.key",
+               certPath: "/etc/ssl/certs/"+deviceId+".cert.pem",
+               caPath: "/etc/ssl/certs/"+accessKey,
+               clientId: deviceId,
+               keepAlive: 45,
+               protocol: protocol,
+               host: iotHubName});
 
-				awsBaseTopic = 'SecurIoT.in/thing/' + deviceId;
-				cloudClient.on('connect', awsConnectCallback);
-				cloudClient.on('close', awsCloseCallback);
-				cloudClient.on('reconnect', awsReconnectCallback);
-				cloudClient.on('offline', awsOfflineCallback);
-				cloudClient.on('error', awsErrorCallback);
-		break;
-		}
-	}
-	if (callback) { callback(); }
+            awsBaseTopic = 'SecurIoT.in/thing/' + deviceId;
+
+            cloudClient.on('connect', awsConnectCallback);
+            cloudClient.on('close', awsCloseCallback);
+            cloudClient.on('reconnect', awsReconnectCallback);
+            cloudClient.on('offline', awsOfflineCallback);
+            cloudClient.on('error', awsErrorCallback);
+      break;
+      }
+   }
+   if (callback) { callback(); }
 }
 
-var gatewayUniqueId;
+var mqttGatewayRelayInit = function(callback)
+{
 
-var child = exec('cat /sys/class/net/eth0/address',
+   log.debug('MQTT relay init');
+   exec('cat /sys/class/net/eth0/address',
 
       function (error, stdout, stderr) {
 
          if (error != null) {
-            log.debug('exec error: ' + error);
-      }
+               log.debug('exec error: ' + error);
+         }
 
-      var wlan = stdout;
-      var mac = wlan.split("\n");
-        gatewayUniqueId = mac[0].toString();
+         var wlan = stdout;
+         var mac = wlan.split("\n");
+         uniqueGetwayId = mac[0].toString();
    });
 
 
-if (typeof localClient != "undefined") {
+   if (typeof localClient != "undefined") {
 
-   localClient.on('connect', function () {
+      localClient.on('connect', function () {
 
-      log.debug('Local MQTT Client connected, setting up subscriptions');
-      localClient.subscribe('gps-data');
-      localClient.subscribe('temp-data');
-      localClient.subscribe('humid-data');
-      localClient.subscribe('no2-data');
-      localClient.subscribe('so2-data');
-   });
-}
+         log.debug('Local MQTT Client connected, setting up subscriptions');
+         localClient.subscribe('no2-data');
+         localClient.subscribe('so2-data');
+         localClient.subscribe('gps-data');
+         localClient.subscribe('temp-data');
+         localClient.subscribe('humid-data');
+      });
+   }
 
-//var finalData;
-var gpsCount = 0;
-var tempCount = 0;
-var humidCount = 0;
-var so2Count = 0;
-var no2Count = 0;
+   //var finalData;
 
-if (typeof localClient != "undefined") {
+   if (typeof localClient != "undefined") {
 
-   localClient.on('message', function (topic, data) {
+      localClient.on('message', function (topic, data) {
 
-      //log.debug(data.toString());
+         //log.debug(data.toString());
 
-      switch (topic) {
-
-      case "gps-data":
-
-         gpsCount ++;
          var now = moment();
          var currentTime   = now.tz("America/New_York").format('YYYY-MM-DDTHH:mm:ss.SSSZZ');
 
-         var gpsData       = data.toString();
-         var splitOutput   = gpsData.split("-");
-         var healthScore   = parseFloat(splitOutput[0]);
-         var finalScore    = healthScore*2.5;
-         var finalGpsData  = JSON.stringify({ sno : gpsCount.toString(), gatewayId : gatewayUniqueId,
-                  sensorId : "gps-"+gatewayUniqueId, dataType : splitOutput[2],
-                  latitude : splitOutput[0], longitude : splitOutput[1],time : currentTime,qualityScore :finalScore })
+         switch (topic) {
 
-         SendDataWhereverRequired (finalGpsData);
-         break;
+         case "gps-data":
 
-      case "temp-data":
+            gpsCount ++;
 
-         tempCount ++;
-         var now = moment();
-         var currentTime   = now.tz("America/New_York").format('YYYY-MM-DDTHH:mm:ss.SSSZZ');
+            var gpsData       = data.toString();
+            var splitOutput   = gpsData.split("-");
+            var healthScore   = parseFloat(splitOutput[0]);
+            var finalScore    = healthScore*2.5;
+            var finalGpsData  = JSON.stringify({ sno : gpsCount.toString(), gatewayId : uniqueGetwayId,
+                     sensorId : "gps-"+uniqueGetwayId, dataType : splitOutput[2],
+                     latitude : splitOutput[0], longitude : splitOutput[1],time : currentTime,qualityScore :finalScore })
 
-         var tempData      = data.toString();
-         var splitTemp     = tempData.split("-");
-         var makeTempData  = parseFloat(splitTemp[0]);
-         var finalTemp     = makeTempData*3.0;
-         var finalScore    = finalTemp + 12;
-         var finalTempData = JSON.stringify({sno : tempCount.toString(), gatewayId : gatewayUniqueId,
-                  sensorId : "temp-"+gatewayUniqueId, dataType : splitTemp[2],
-                  temperature : finalTemp ,time : currentTime,qualityScore :finalScore})
+            mqttRelayDataSend (finalGpsData);
+            break;
 
-         SendDataWhereverRequired (finalTempData);
-          break;
+         case "temp-data":
 
-      case "humid-data":
+            tempCount ++;
 
-         humidCount ++;
-         var now = moment();
-         var currentTime    = now.tz("America/New_York").format('YYYY-MM-DDTHH:mm:ss.SSSZZ');
+            var tempData      = data.toString();
+            var splitTemp     = tempData.split("-");
+            var makeTempData  = parseFloat(splitTemp[0]);
+            var finalTemp     = makeTempData*3.0;
+            var finalScore    = finalTemp + 12;
+            var finalTempData = JSON.stringify({sno : tempCount.toString(), gatewayId : uniqueGetwayId,
+                     sensorId : "temp-"+uniqueGetwayId, dataType : splitTemp[2],
+                     temperature : finalTemp ,time : currentTime,qualityScore :finalScore})
 
-         var humidData      = data.toString();
-         var splitHumid     = humidData.split("-");
-         var makeHumidData  = parseFloat(splitHumid[1]);
-         var finalHumid     = makeHumidData+20.0;
-         var finalScore     = finalHumid -18;
-         var finalHumidData = JSON.stringify({sno :humidCount.toString(), gatewayId : gatewayUniqueId,
-                  sensorId : "humid-"+gatewayUniqueId, dataType : splitHumid[2],
-                  humidity : finalHumid ,time : currentTime,qualityScore :finalScore})
+            mqttRelayDataSend (finalTempData);
+            break;
 
-         SendDataWhereverRequired (finalHumidData);
-         break;
+         case "humid-data":
 
-      case "no2-data":
+            humidCount ++;
 
-         no2Count ++;
-         var now = moment();
+            var humidData      = data.toString();
+            var splitHumid     = humidData.split("-");
+            var makeHumidData  = parseFloat(splitHumid[1]);
+            var finalHumid     = makeHumidData+20.0;
+            var finalScore     = finalHumid -18;
+            var finalHumidData = JSON.stringify({sno :humidCount.toString(), gatewayId : uniqueGetwayId,
+                     sensorId : "humid-"+uniqueGetwayId, dataType : splitHumid[2],
+                     humidity : finalHumid ,time : currentTime,qualityScore :finalScore})
 
-         var currentTime  = now.tz("America/New_York").format('YYYY-MM-DDTHH:mm:ss.SSSZZ');
+            mqttRelayDataSend (finalHumidData);
+            break;
 
-         var no2Data      = data.toString();
-         var splitNo2     = no2Data.split("-");
-         var makeNo2Data  = parseFloat(splitNo2[0]);
-         var finalNo2     = makeNo2Data+7.0;
-         var finalScore   = finalNo2 + 14;
-         var finalNo2Data = JSON.stringify({sno : no2Count.toString(), gatewayId : gatewayUniqueId,
-                  sensorId : "no2-"+gatewayUniqueId, dataType : splitNo2[2],
-                  no2 : finalNo2 ,time : currentTime,qualityScore :finalScore})
+         case "no2-data":
 
-         SendDataWhereverRequired (finalNo2Data);
-          break;
+            no2Count ++;
 
-      case "so2-data":
+            var no2Data      = data.toString();
+            var splitNo2     = no2Data.split("-");
+            var makeNo2Data  = parseFloat(splitNo2[0]);
+            var finalNo2     = makeNo2Data+7.0;
+            var finalScore   = finalNo2 + 14;
+            var finalNo2Data = JSON.stringify({sno : no2Count.toString(), gatewayId : uniqueGetwayId,
+                     sensorId : "no2-"+uniqueGetwayId, dataType : splitNo2[2],
+                     no2 : finalNo2 ,time : currentTime,qualityScore :finalScore})
 
-         so2Count ++
-         var now = moment();
-         var currentTime  = now.tz("America/New_York").format('YYYY-MM-DDTHH:mm:ss.SSSZZ');
-         var so2Data      = data.toString();
-         var splitSo2     = so2Data.split("-");
-         var makeSo2Data  = parseFloat(splitSo2[0]);
-         var finalSo2     = makeSo2Data+15.0;
-         var finalScore   = finalSo2 -5;
-         var finalSo2Data = JSON.stringify({sno : so2Count.toString(), gatewayId : gatewayUniqueId,
-                  sensorId : "so2-"+gatewayUniqueId, dataType : splitSo2[2],
-                  so2 : finalSo2,time : currentTime ,qualityScore :finalScore})
+            mqttRelayDataSend (finalNo2Data);
+             break;
 
-         SendDataWhereverRequired (finalSo2Data);
-         break;
-      }
-   });
+         case "so2-data":
+
+            so2Count ++
+
+            var so2Data      = data.toString();
+            var splitSo2     = so2Data.split("-");
+            var makeSo2Data  = parseFloat(splitSo2[0]);
+            var finalSo2     = makeSo2Data+15.0;
+            var finalScore   = finalSo2 -5;
+            var finalSo2Data = JSON.stringify({sno : so2Count.toString(), gatewayId : uniqueGetwayId,
+                     sensorId : "so2-"+uniqueGetwayId, dataType : splitSo2[2],
+                     so2 : finalSo2,time : currentTime ,qualityScore :finalScore})
+
+            mqttRelayDataSend (finalSo2Data);
+            break;
+         }
+      });
+   }
+
+   if (callback) { callback(); }
 }
 
-var SendDataWhereverRequired = function (finalData)
+var mqttRelayDataSend = function (finalData)
 {
    log.debug(finalData);
 
@@ -343,15 +346,15 @@ var SendDataWhereverRequired = function (finalData)
          switch(forwardingRule[rule].then.sendto) {
 
          case "cloud":
-         //sendToCloud(mesage);
-         return;
+            //sendToCloud(mesage);
+            return;
 
          case "analytics":
-         //sendToAnaltics(message);
-         return;
+            //sendToAnaltics(message);
+            return;
 
          case "daisy-chained":
-         return;
+            return;
 
          }
       }
@@ -360,33 +363,37 @@ var SendDataWhereverRequired = function (finalData)
 
 var sendToCloud = function(message)
 {
-   switch (serverType){
+   switch (cloudServerType) {
 
    case "azure":
       cloudClient.sendEvent(message, function (err) {
 
-         if (err) log.debug(err.toString());
+         if (err) { log.debug(err.toString()); }
 
       });
       break;
 
    case "AWS":
-   break;
+      break;
 
    }
 }
 
-var updateSystemStatus = function (systemStatus) {
-	switch (serverType) {
-		case "azure":
-			azureDT.updateSystemStatus (systemStatus);
-			break;
-		case "AWS":
-			awsTS.updateSystemStatus (systemStatus);
-			break;
-	}
+var updateSystemStatus = function (systemStatus)
+{
+   switch (cloudServerType) {
+
+   case "azure":
+      azureDT.updateSystemStatus (systemStatus);
+      break;
+
+   case "AWS":
+      awsTS.updateSystemStatus (systemStatus);
+      break;
+   }
 }
 
-module.exports.mqttLocalClientInit = mqttLocalClientInit;
-module.exports.mqttCloudClientInit = mqttCloudClientInit;
-module.exports.updateSystemStatus  = updateSystemStatus;
+module.exports.updateSystemStatus   = updateSystemStatus;
+module.exports.mqttCloudClientInit  = mqttCloudClientInit;
+module.exports.mqttLocalClientInit  = mqttLocalClientInit;
+module.exports.mqttGatewayRelayInit = mqttGatewayRelayInit;

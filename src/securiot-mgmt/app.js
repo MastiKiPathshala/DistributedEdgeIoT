@@ -525,6 +525,12 @@ var appSetState = function()
 
          appUpdateSystemStatus(callback);
       },
+
+      // mqtt relay local and cloud client
+      function(callback) {
+
+         cloudConnect.mqttGatewayRelayInit(callback);
+      },
       // initialize host name
       function(callback) {
          appSetHostName(callback);
