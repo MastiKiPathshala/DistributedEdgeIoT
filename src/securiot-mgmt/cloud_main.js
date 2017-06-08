@@ -190,6 +190,7 @@ var mqttGatewayRelayInit = function(callback)
 {
 
    log.debug('MQTT relay init');
+
    exec('cat /sys/class/net/eth0/address',
 
       function (error, stdout, stderr) {
@@ -198,8 +199,8 @@ var mqttGatewayRelayInit = function(callback)
                log.debug('exec error: ' + error);
          }
 
-         var wlan = stdout;
-         var mac = wlan.split("\n");
+         var wlan       = stdout;
+         var mac        = wlan.split("\n");
          uniqueGetwayId = mac[0].toString();
    });
 
@@ -326,6 +327,7 @@ var mqttRelayDataSend = function (finalData)
       switch (forwardingRule[rule].match.data_type) {
 
       case "any":
+
          switch(forwardingRule[rule].than.send_to) {
 
          case "cloud":
@@ -366,6 +368,7 @@ var sendToCloud = function(message)
    switch (cloudServerType) {
 
    case "azure":
+
       cloudClient.sendEvent(message, function (err) {
 
          if (err) { log.debug(err.toString()); }
