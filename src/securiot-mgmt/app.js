@@ -36,12 +36,13 @@ SECURIOT_DEFAULT_HARDWARE_SERIAL = "DHB-YY-XXXXX";
 
 SECURIOT_MAINTENANCE_TIMEOUT = (60*60000) // one hour
 
-SOFTWARE_VERSION_TAG	= 'softwareVersion';
-KERNEL_VERSION_TAG		= 'kernelVersion';
-HARDWARE_VERSION_TAG	= 'hardwareVersion';
-FIRMWARE_VERSION_TAG	= 'firmwareVersion';
-HARDWARE_SERIAL_TAG		= 'hardwareSerial';
-MANUFACTURER_TAG		= 'manufacturer';
+SOFTWARE_VERSION_TAG      = 'softwareVersion';
+KERNEL_VERSION_TAG        = 'kernelVersion';
+HARDWARE_VERSION_TAG      = 'hardwareVersion';
+FIRMWARE_VERSION_TAG      = 'firmwareVersion';
+HARDWARE_SERIAL_TAG       = 'hardwareSerial';
+MANUFACTURER_TAG          = 'manufacturer';
+OFFLINE_DATA_FILE_TAG     = 'offlineDataFiles'
 
 //Global variables
 user = '';

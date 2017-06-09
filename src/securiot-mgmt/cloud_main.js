@@ -28,7 +28,7 @@ var awsTS    = require('./cloud_aws_thingshadow');
 var awsDM    = require('./cloud_aws_directmessage');
 
 var uniqueGetwayId;
-var srverType;
+var cloudServerType;
 
 var so2Count   = 0;
 var no2Count   = 0;
@@ -38,30 +38,30 @@ var humidCount = 0;
 
 var azureConnectCallback = function (err)
 {
-	if (err) {
-		log.error('Azure Cloud Client connection failed : ' + err);
-	//	setInterval (function () {
-	//		cloudClient.open (azureConnectCallback);
-	//	}, 1000);
-	} else {
-		log.debug('Azure Cloud Client connected');
-		cloudClient.on('message', azureC2D.onC2DMessage);
-		//client.receive (function (err, res, msg) {
-		cloudClient.getTwin(azureDT.onConfigChange);
-		cloudClient.onDeviceMethod('softwareUpGrade', azureDM.onSoftwareUpgrade);
-		cloudClient.onDeviceMethod('reboot', azureDM.onReboot);
-		cloudClient.onDeviceMethod('configReset', azureDM.onConfigReset);
-		cloudClient.onDeviceMethod('remoteDiagnostics', azureDM.onRemoteDiagnostics);
-	}
+   if (err) {
+      log.error('Azure Cloud Client connection failed : ' + err);
+   //   setInterval (function () {
+   //      cloudClient.open (azureConnectCallback);
+   //   }, 1000);
+   } else {
+      log.debug('Azure Cloud Client connected');
+      cloudClient.on('message', azureC2D.onC2DMessage);
+      //client.receive (function (err, res, msg) {
+      cloudClient.getTwin(azureDT.onConfigChange);
+      cloudClient.onDeviceMethod('softwareUpGrade', azureDM.onSoftwareUpgrade);
+      cloudClient.onDeviceMethod('reboot', azureDM.onReboot);
+      cloudClient.onDeviceMethod('configReset', azureDM.onConfigReset);
+      cloudClient.onDeviceMethod('remoteDiagnostics', azureDM.onRemoteDiagnostics);
+   }
 };
 
 var azureCloseCallback = function (err, result)
 {
-	if (err) {
-		log.debug ("Azure Cloud connection close failed: " + err);
-	} else {
-		log.debug ("Azure Cloud connection closed : " + result);
-	}
+   if (err) {
+      log.debug ("Azure Cloud connection close failed: " + err);
+   } else {
+      log.debug ("Azure Cloud connection closed : " + result);
+   }
 }
 
 var awsConnectCallback = function (err)
@@ -379,95 +379,133 @@ var mqttRelayDataSend = function (finalData)
    }
 }
 
-var getOfflineDirectory = function (callback) {
-	var date = require('date-and-time');
-	var now = new Date();
-
-    var currentTime = date.format(now, 'YYYY/MM/DD HH:mm A [GMT]Z', true);
-    var splitCurrentTime = currentTime.split("/");
-
-    var year = splitCurrentTime[0];
-    var month = splitCurrentTime[1];
-
-    var getDateHour = splitCurrentTime[2].split(" ");
-    var date = getDateHour[0];
-
-    var getHour = getDateHour[1].split(":");
-    var hour = getHour[0];
-
-	var offlineDirectory = '/var/log/SecurIoT.in/' + year + '/' + month + '/' + date + '/' + hour;
-	callback (offlineDirectory);
-}
-
 var sendToCloud = function(sensorData)
 {
-	switch (cloudServerType){
+   switch (cloudServerType){
 
-		case "azure":
-			var message = new Message (sensorData);
+      case "azure":
+         var message = new Message (sensorData);
 
-			cloudClient.sendEvent(message, function (err) {
-				if (err) {
-					log.error ("Message send failed : " + err.toString() + ", moving to offline storage");
-					// store data in file "sensorOffline.json" in bucket based on YYYY/MM/DD/HH format
-					getOfflineDirectory (function (offlineDirectory) {
-						offlineFile = offlineDirectory + '/sensorOffline.json';
+         cloudClient.sendEvent(message, function (err) {
 
-						exec ("sudo makdir -p " + offlineDirectory, function () {
-							cmd = "sudo cat " + sensorData + " >> " + offlineFile;
-							exec (cmd, function () {
-								log.debug ("Message stored offline");
-							});
-						});
-					});
-				} else {
-					log.trace ("Message sent : " + message);
-				}
-			});
-		break;
+            if (err) {
 
-		case "AWS":
-		break;
-	}
+               log.error ("sensor data send failed : " + err.toString());
+               pushDataToStorage(sensorData);
+
+            } else {
+               log.trace ("Message sent : " + message);
+            }
+         });
+      break;
+
+      case "AWS":
+      break;
+   }
+}
+
+var pushDataToStorage = function (sensorData)
+{
+   log.trace ('moving data to offline storage');
+
+   getCreateOfflineDirectory (function (directory) {
+
+      var file = directory + '/sensorOffline.json';
+
+      writeOneTuple(file, sensorData);
+   });
+}
+
+var getCreateOfflineDirectory = function (callback)
+{
+   // store data in file "sensorOffline.json" in bucket based on YYYY/MM/DD/HH format
+
+   var date = require('date-and-time');
+   var now = new Date();
+
+   var currentTime = date.format(now, 'YYYY/MM/DD HH:mm A [GMT]Z', true);
+   var splitCurrentTime = currentTime.split("/");
+
+   var year = splitCurrentTime[0];
+   var month = splitCurrentTime[1];
+
+   var getDateHour = splitCurrentTime[2].split(" ");
+   var date = getDateHour[0];
+
+   var getHour = getDateHour[1].split(":");
+   var hour = getHour[0];
+
+   var directory = '/var/log/' + BASE_MODULE + '.in/' + year + '/' + month + '/' + date + '/' + hour;
+
+   // create the direcotry
+   if (!fs.existsSync(directory)) {
+
+       var cmd = "sudo makdir -p " + directory;
+       exec (cmd, function () {
+          callback (directory);
+       });
+    } else {
+       callback (directory);
+    }
+}
+
+var writeOneTuple = function (file, sensorData)
+{
+    cmd = "sudo cat " + sensorData + " >> " + file;
+
+    if (!fs.existsSync(file)) {
+
+        redisCli.hmset(OFFLINE_DATA_FILE_TAG, file,
+
+           function(err, res) {
+             if (err) {
+                log.debug('offline file entry add fail, ' + file);
+             }
+        });
+    }
+
+    exec (cmd, function () {
+       log.trace ("Message stored offline");
+    });
 }
 
 var updateSystemStatus = function (systemStatus)
 {
-	switch (cloudServerType) {
-		case "azure":
-			azureDT.updateSystemStatus (systemStatus);
-			break;
-		case "AWS":
-			awsTS.updateSystemStatus (systemStatus);
-			break;
-	}
+   switch (cloudServerType) {
+      case "azure":
+         azureDT.updateSystemStatus (systemStatus);
+         break;
+      case "AWS":
+         awsTS.updateSystemStatus (systemStatus);
+         break;
+   }
 }
 
 var updateRemoteCmdStatus = function (cmd, status, msg, source)
 {
-	// io.emit to gatewayUI
-	io.emit(cmd, { action: status, status: msg});
-	// update Azure Device Twin or AWS Thing Shadow
-	switch (cloudServerType) {
-		case "azure":
-			azureDM.updateRemoteCmdStatus (cmd, status, msg, source);
-			break;
-		case "AWS":
-			awsDM.updateRemoteCmdStatus (cmd, status, msg, source);
-			break;
-	}
+   // io.emit to gatewayUI
+   io.emit(cmd, { action: status, status: msg});
+   // update Azure Device Twin or AWS Thing Shadow
+   switch (cloudServerType) {
+      case "azure":
+         azureDM.updateRemoteCmdStatus (cmd, status, msg, source);
+         break;
+      case "AWS":
+         awsDM.updateRemoteCmdStatus (cmd, status, msg, source);
+         break;
+   }
 }
 
 var sendRemoteCmdResponse = function (response, status)
 {
-	switch (cloudServerType) {
-		case "azure":
-			azureDM.sendRemoteCmdResponse (response, status);
-			break;
-		case "AWS":
-			awsDM.sendRemoteCmdResponse (response, status);
-			break;
-	}
+   switch (cloudServerType) {
+      case "azure":
+         azureDM.sendRemoteCmdResponse (response, status);
+         break;
+      case "AWS":
+         awsDM.sendRemoteCmdResponse (response, status);
+         break;
+   }
 }
 
 module.exports.mqttLocalClientInit = mqttLocalClientInit;
