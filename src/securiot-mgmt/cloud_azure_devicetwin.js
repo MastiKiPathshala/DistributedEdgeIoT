@@ -54,29 +54,33 @@ var completeConfigChange =  function(twin) {
 
 exports.updateSystemStatus = function (systemStatus) {
 
-   if (typeof cloudClient != "undefined") {
+	if (typeof cloudClient != "undefined") {
 
-      cloudClient.getTwin (function (err, twin) {
-         var patch = {
-            SystemStatus: {
-               softwareVersion: systemStatus.softwareVersion,
-               kernelVersion: systemStatus.kernelVersion,
-               hardwareVersion: systemStatus.hardwareVersion,
-               firmwareVersion: systemStatus.firmwareVersion,
-               manufacturer: systemStatus.manufacturer,
-               sensorsAttached: systemStatus.sensorsAttached,
-               lastBootup: new Date()
-            }
-         };
-         twin.properties.reported.update(patch, function(err) {
-            if (err) {
-               log.error('System Status not updated : ' + err);
-            } else {
-               log.debug('System Status updated: ' + JSON.stringify(patch));
-            }
-         });
-      });
-   }
+		cloudClient.getTwin (function (err, twin) {
+			if (err) {
+				log.error ("Azure Client failed to get twin : " + err);
+			} else {
+				var patch = {
+					SystemStatus: {
+						softwareVersion: systemStatus.softwareVersion,
+						kernelVersion: systemStatus.kernelVersion,
+						hardwareVersion: systemStatus.hardwareVersion,
+						firmwareVersion: systemStatus.firmwareVersion,
+						manufacturer: systemStatus.manufacturer,
+						sensorsAttached: systemStatus.sensorsAttached,
+						lastBootup: new Date()
+					}
+				};
+				twin.properties.reported.update(patch, function(err) {
+					if (err) {
+						log.error('System Status not updated : ' + err);
+					} else {
+						log.debug('System Status updated: ' + JSON.stringify(patch));
+					}
+				});
+			}
+		});
+	}
 }
 
 exports.onConfigChange = function(err, twin) {

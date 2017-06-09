@@ -15,6 +15,7 @@
 
 var exec = require('child_process').exec;
 var system = require ('./routes/system');
+var diagnostics = require ('./routes/diagnostics');
 
 var simulateDownloadImage = function(imageUrl, callback) {
   var error = null;
@@ -128,37 +129,51 @@ var applyImage = function(twin, imageData, callback) {
   }, 4000);
 }
 
-exports.updateRebootStatus = function (reasonStr) {
-	// Report the reboot before the physical restart
-	var date = new Date();
-	var patch = {
-		SystemStatus : {
-			reboot: {
-				lastReboot: date.toISOString(),
-				rebootReason: reasonStr
-			}
+var sendRemoteCmdResponse = function (cmd, response, status)
+{
+	response.send(200, status, function(err) {
+		if (!err) {
+			log.error('An error occured when sending a method response:\n' + err.toString());
+		} else {
+			log.debug('Response to method \'' + cmd + '\' sent successfully.');
 		}
-	};
+	});
+}
+
+var updateRemoteCmdStatus = function (cmd, status, msg, source)
+{
+	var date = new Date();
+	var patch = {};
+	patch.RemoteCommand = {};
+	patch.RemoteCommand[cmd] = {
+				cmdStatus: status,
+				cmdMsg: msg,
+			};
+	if (status == 'Started') {
+		patch.RemoteCommand[cmd]['lastCmd'] = date.toISOString();
+		patch.RemoteCommand[cmd]['cmdSource'] = source;
+	}
+
 	// Get device Twin
 	cloudClient.getTwin(function(err, twin) {
 		if (err) {
-            console.error('could not get twin');
+            log.error("Remote command: " + cmd + ", Error: could not get twin");
 		} else {
-			log.debug('twin acquired');
 			twin.properties.reported.update(patch, function(err) {
 				if (err) throw err;
-				log.debug('Device reboot twin state reported')
+            	log.debug ("Remote command: " + cmd + ", twin state updated");
 			});
 		}
 	});
 }
 
-exports.onFirmwareUpdate = function(request, response) {
+exports.onSoftwareUpgrade = function(request, response) {
 
+	log.debug ("ID: " + request.requestId + ", Method: " + request.methodName + ", Payload: " + request.payload);
   // Respond the cloud app for the direct method
   response.send(200, 'FirmwareUpdate started', function(err) {
     if (!err) {
-      console.error('An error occured when sending a method response:\n' + err.toString());
+      log.error('An error occured when sending a method response:\n' + err.toString());
     } else {
       log.debug('Response to method \'' + request.methodName + '\' sent successfully.');
     }
@@ -170,7 +185,7 @@ exports.onFirmwareUpdate = function(request, response) {
   // Obtain the device twin
   cloudClient.getTwin(function(err, twin) {
     if (err) {
-      console.error('Could not get device twin.');
+      log.error('Could not get device twin.');
     } else {
       log.debug('Device twin acquired.');
 
@@ -185,41 +200,32 @@ exports.onFirmwareUpdate = function(request, response) {
   });
 }
 
-exports.onReboot = function(request, response) {
-    
-	log.debug ("Method: " + request.method + ", Payload: " + request.payload);
-    // Respond the cloud app for the direct method
-	response.send(200, 'Reboot started', function(err) {
-        if (!err) {
-            console.error('An error occured when sending a method response:\n' + err.toString());
-        } else {
-            log.debug('Response to method \'' + request.methodName + '\' sent successfully.');
-        }
-    });
-	exports.updateRebootStatus ("IoTHub triggered reboot");
+exports.onReboot = function(request, response)
+{
+	log.debug ("ID: " + request.requestId + ", Method: " + request.methodName + ", Payload: " + request.payload);
+	sendRemoteCmdResponse ('reboot', response, {success: 'true', msg: 'Remote Reboot request received'});
+	updateRemoteCmdStatus ('reboot', 'Started', 'Invoking device reboot ....', 'IoTHub triggered reboot');
 	system.restartSystem ();
+	updateRemoteCmdStatus ('reboot', 'In-Progress', 'Device rebooting ....', 'IoTHub triggered reboot');
 };
 
-exports.onFactoryReset = function (request, response)
+exports.onConfigReset = function (request, response)
 {
-	log.debug ("Method: " + request.method + ", Payload: " + request.payload);
+	log.debug ("ID: " + request.requestId + ", Method: " + request.methodName + ", Payload: " + request.payload);
 	response.send(200, 'Factory Reset started', function(err) {
         if (!err) {
-            console.error('An error occured when sending a method response:\n' + err.toString());
+            log.error('An error occured when sending a method response:\n' + err.toString());
         } else {
             log.debug('Response to method \'' + request.methodName + '\' sent successfully.');
         }
 	});
 }
 
-exports.onRemoteDiagnostic = function (request, response)
+exports.onRemoteDiagnostics = function (request, response)
 {
-	log.debug ("Method: " + request.method + ", Payload: " + request.payload);
-	response.send(200, 'Remote Diagnostic started', function(err) {
-		if (!err) {
-			console.error('An error occured when sending a method response:\n' + err.toString());
-		} else {
-			log.debug('Response to method \'' + request.methodName + '\' sent successfully.');
-		}
-	});
+	log.debug ("ID: " + request.requestId + ", Method: " + request.methodName + ", Payload: " + request.payload);
+	updateRemoteCmdStatus ('remoteDiagnostics', 'Started', 'Received diagnostics bundle request', 'IoTHub triggered remoteDiagnostics');
+	diagnostics.sendRemoteDiagnostics (response);
 }
+module.exports.updateRemoteCmdStatus = updateRemoteCmdStatus;
+module.exports.sendRemoteCmdResponse = sendRemoteCmdResponse;

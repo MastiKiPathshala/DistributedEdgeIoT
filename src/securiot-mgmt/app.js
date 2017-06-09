@@ -11,7 +11,7 @@ var moment       = require('moment-timezone');
 var express      = require('express');
 var bodyParser   = require('body-parser');
 var cookieParser = require('cookie-parser');
-var cloudConnect = require ('./cloud_main');
+cloudConnect = require ('./cloud_main');
 
 BASE_MODULE  = 'securiot';
 HOST_HOME    = '/home/Kat@ppa';
@@ -83,7 +83,7 @@ var config      = require('./routes/config');
 var system      = require('./routes/system');
 var upgrade     = require('./routes/upgrade');
 //var statistics  = require('./routes/statistics');
-//var diagnostics = require('./routes/diagnostics');
+var diagnostics = require('./routes/diagnostics');
 
 var app = express();
 
@@ -501,6 +501,7 @@ var appSetState = function()
 
          appGetEthmacAddr(callback);
       },
+*/
 
       // check system status
       function(callback) {
@@ -509,7 +510,6 @@ var appSetState = function()
          callback();
       },
 
-*/
       // Initialize local MQTT client
       function(callback) {
 

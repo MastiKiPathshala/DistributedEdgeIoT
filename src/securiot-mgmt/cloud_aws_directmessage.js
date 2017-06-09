@@ -23,17 +23,43 @@ var messageCallback = function(topic, payload)
 		var remoteConfigCmd = JSON.parse(payload);
  		log.debug ("RemoteConfig - Method: " + remoteConfigCmd.method + ", Payload: " + JSON.stringify (remoteConfigCmd.payload));
 		switch (remoteConfigCmd.method) {
-			case "firmwareUpdate":
+			case "softwareUpgrade":
 			break;
 			case "reboot":
-				updateRebootStatus ("AWS IoT triggered reboot");
+				updateRemoteCmdStatus ('reboot', 'Started', 'Invoking device reboot ....', 'AWS IoT triggered reboot');
 				system.restartSystem ();
+				updateRemoteCmdStatus ('reboot', 'In-Progress', 'Device rebooting ....', 'AWS IoT triggered reboot');
 			break;
-			case "factoryReset":
+			case "configReset":
 			break;
-			case "remoteDiagnostic":
+			case "remoteDiagnostics":
 			break;
 		}
+	}
+}
+
+var updateRemoteCmdStatus = function (cmd, status, msg, source)
+{
+	var date = new Date();
+	var myThingState = {};
+	myThingState['state']['reported']['SystemStatus'][cmd] = {
+				cmdStatus: status,
+                cmdMsg: msg,
+	}
+	if (status == 'Started') {
+		myThingState.state.reported.SystemStatus[cmd]['lastCmd'] = date.toISOString();
+		myThingState.state.reported.SystemStatus[cmd]['cmdSource'] = source;
+	}
+	
+	cloudClientToken = cloudClient.update (deviceId, myThingState);
+
+	if (cloudClientToken === null) {
+		log.debug ("Failed to update System status, AttemptCount: " + updateAttemptCount);
+		currentTimeout = setTimeout (function () {
+			exports.updateSystemStatus (systemStatus);
+		}, 10000);
+	} else {
+		clientTokenStack.push (cloudClientToken);
 	}
 }
 
@@ -65,4 +91,4 @@ var updateRebootStatus = function (reasonStr)
 }
 
 module.exports.messageCallback  = messageCallback;
-module.exports.updateRebootStatus  = updateRebootStatus;
+module.exports.updateRemoteCmdStatus  = updateRemoteCmdStatus;

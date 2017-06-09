@@ -11,7 +11,6 @@ var iwconfig = require('wireless-tools/iwconfig')
 var hostname = os.hostname();
 var ifconfig = require('wireless-tools/ifconfig');
 var redis = require('redis');
-azureDM = require ('../cloud_azure_directmethod');
 
 // router module
 var system = express.Router();
@@ -160,8 +159,9 @@ system.post('/', function(req, res) {
         log.debug(' received reboot request');
         res.writeHead(200);
         res.end('{"status":true}');
-	azureDM.updateRebootStatus ("User Agent triggered reboot");
+		cloudConnect.updateRemoteCmdStatus ('reboot', 'Started', 'Invoking device reboot ....', 'User Agent triggered reboot');
         restartSystem();
+		cloudConnect.updateRemoteCmdStatus ('reboot', 'In-Progress', 'Device rebooting ....', null);
         break;
 
     default:
