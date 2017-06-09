@@ -58,6 +58,7 @@ var awsConnectCallback = function (err)
    if (err) {
       log.error('AWS Cloud Client connection failed : ' + err);
    } else {
+
       log.debug('AWS Cloud Client connected');
       awsRemoteConfigTopic = awsBaseTopic+'/topic/remoteconfig';
       cloudClient.on ('update', awsTS.updateCallback);
@@ -78,6 +79,7 @@ var awsReconnectCallback = function (err)
    if (err) {
       log.error('AWS Cloud Client reconnection failed : ' + err);
    } else {
+
       log.debug('AWS Cloud Client reconnected');
       awsRemoteConfigTopic = awsBaseTopic+'/topic/remoteconfig';
       cloudClient.on ('update', awsTS.updateCallback);
@@ -156,31 +158,31 @@ var mqttCloudClientInit = function (callback)
          cloudClient = clientFromConnectionString(connectionString);
          var Message = azureIoT.Message;
          cloudClient.open (azureConnectCallback);
-      break;
+         break;
 
       case "AWS":
-            log.info('AWS Cloud Server');
-            iotHubName  = parsedConfigData.gatewaySaurabhpi.ServerConfig.data.AWSConfig.IoTHub;
-            protocol    = parsedConfigData.gatewaySaurabhpi.ServerConfig.data.AWSConfig.Protocol;
-            deviceId    = parsedConfigData.gatewaySaurabhpi.ServerConfig.data.AWSConfig.DeviceId;
-            accessKey   = parsedConfigData.gatewaySaurabhpi.ServerConfig.data.AWSConfig.AccessKey;
-            cloudClient = awsIoT.thingShadow ({
-               keyPath: "/etc/ssl/certs/"+deviceId+".private.key",
-               certPath: "/etc/ssl/certs/"+deviceId+".cert.pem",
-               caPath: "/etc/ssl/certs/"+accessKey,
-               clientId: deviceId,
-               keepAlive: 45,
-               protocol: protocol,
-               host: iotHubName});
+         log.info('AWS Cloud Server');
+         iotHubName  = parsedConfigData.gatewaySaurabhpi.ServerConfig.data.AWSConfig.IoTHub;
+         protocol    = parsedConfigData.gatewaySaurabhpi.ServerConfig.data.AWSConfig.Protocol;
+         deviceId    = parsedConfigData.gatewaySaurabhpi.ServerConfig.data.AWSConfig.DeviceId;
+         accessKey   = parsedConfigData.gatewaySaurabhpi.ServerConfig.data.AWSConfig.AccessKey;
+         cloudClient = awsIoT.thingShadow ({
+            keyPath: "/etc/ssl/certs/"+deviceId+".private.key",
+            certPath: "/etc/ssl/certs/"+deviceId+".cert.pem",
+            caPath: "/etc/ssl/certs/"+accessKey,
+            clientId: deviceId,
+            keepAlive: 45,
+            protocol: protocol,
+            host: iotHubName});
 
-            awsBaseTopic = 'SecurIoT.in/thing/' + deviceId;
+         awsBaseTopic = 'SecurIoT.in/thing/' + deviceId;
 
-            cloudClient.on('connect', awsConnectCallback);
-            cloudClient.on('close', awsCloseCallback);
-            cloudClient.on('reconnect', awsReconnectCallback);
-            cloudClient.on('offline', awsOfflineCallback);
-            cloudClient.on('error', awsErrorCallback);
-      break;
+         cloudClient.on('connect', awsConnectCallback);
+         cloudClient.on('close', awsCloseCallback);
+         cloudClient.on('reconnect', awsReconnectCallback);
+         cloudClient.on('offline', awsOfflineCallback);
+         cloudClient.on('error', awsErrorCallback);
+         break;
       }
    }
    if (callback) { callback(); }
@@ -203,7 +205,6 @@ var mqttGatewayRelayInit = function(callback)
          var mac        = wlan.split("\n");
          uniqueGetwayId = mac[0].toString();
    });
-
 
    if (typeof localClient != "undefined") {
 
@@ -240,8 +241,9 @@ var mqttGatewayRelayInit = function(callback)
             var healthScore   = parseFloat(splitOutput[0]);
             var finalScore    = healthScore*2.5;
             var finalGpsData  = JSON.stringify({ sno : gpsCount.toString(), gatewayId : uniqueGetwayId,
-                     sensorId : "gps-"+uniqueGetwayId, dataType : splitOutput[2],
-                     latitude : splitOutput[0], longitude : splitOutput[1],time : currentTime,qualityScore :finalScore })
+                   sensorId : "gps-"+uniqueGetwayId, dataType : splitOutput[2],
+                   latitude : splitOutput[0], longitude : splitOutput[1],time : currentTime,
+                   qualityScore :finalScore })
 
             mqttRelayDataSend (finalGpsData);
             break;
@@ -336,13 +338,15 @@ var mqttRelayDataSend = function (finalData)
 
          case "analytics":
 
-         sendToAnaltics(dataForForwarding);
+            sendToAnaltics(dataForForwarding);
             return;
 
          case "daisy-chained":
             return;
 
          }
+         break;
+
       case "HY":
 
          switch(forwardingRule[rule].then.sendto) {
@@ -359,6 +363,7 @@ var mqttRelayDataSend = function (finalData)
             return;
 
          }
+         break;
       }
    }
 }
