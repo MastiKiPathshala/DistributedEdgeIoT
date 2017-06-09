@@ -14,14 +14,13 @@ var fs       = require('fs');
 var rl       = require('readline');
 var os       = require("os");
 var exec     = require('child_process').exec;
-var mqtt     = require('mqtt')
 var moment   = require('moment-timezone');
 
 var offlineFiles = {};
 
 var cloudClient = require('./cloud_main');
 
-net.on("connect", offlineProcessData);
+network.on("online", offlineProcessData);
 
 var offlineProcessData = function()
 {
