@@ -28,7 +28,7 @@ var awsTS    = require('./cloud_aws_thingshadow');
 var awsDM    = require('./cloud_aws_directmessage');
 
 var uniqueGetwayId;
-var cloudServerType;
+var srverType;
 
 var so2Count   = 0;
 var no2Count   = 0;
@@ -401,7 +401,7 @@ var getOfflineDirectory = function (callback) {
 
 var sendToCloud = function(sensorData)
 {
-	switch (serverType){
+	switch (cloudServerType){
 
 		case "azure":
 			var message = new Message (sensorData);
@@ -433,7 +433,7 @@ var sendToCloud = function(sensorData)
 
 var updateSystemStatus = function (systemStatus)
 {
-	switch (serverType) {
+	switch (cloudServerType) {
 		case "azure":
 			azureDT.updateSystemStatus (systemStatus);
 			break;
@@ -448,7 +448,7 @@ var updateRemoteCmdStatus = function (cmd, status, msg, source)
 	// io.emit to gatewayUI
 	io.emit(cmd, { action: status, status: msg});
 	// update Azure Device Twin or AWS Thing Shadow
-	switch (serverType) {
+	switch (cloudServerType) {
 		case "azure":
 			azureDM.updateRemoteCmdStatus (cmd, status, msg, source);
 			break;
@@ -460,7 +460,7 @@ var updateRemoteCmdStatus = function (cmd, status, msg, source)
 
 var sendRemoteCmdResponse = function (response, status)
 {
-	switch (serverType) {
+	switch (cloudServerType) {
 		case "azure":
 			azureDM.sendRemoteCmdResponse (response, status);
 			break;
