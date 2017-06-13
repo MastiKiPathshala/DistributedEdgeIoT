@@ -4,12 +4,9 @@ var rl           = require('readline');
 var os           = require('os');
 var dns          = require('dns');
 var exec         = require('child_process').exec;
-var path         = require('path');
 var util         = require('util');
 var spawn        = require('child_process').spawn;
 var async        = require('async');
-var redis        = require('redis');
-var moment       = require('moment-timezone');
 var express      = require('express');
 var usbDetect    = require ('usb-detection');
 var EventEmitter = require('events').EventEmitter;
@@ -20,14 +17,20 @@ var intfCheckTimer;
 var usbIntfCheckTimer;
 var usbDetectCounter = 0;
 
-var INTF_TIME     = 50000;
+var INTF_TIME     = 20000;
 var USB_INTF_TIME = 10000;
 
 var intfCheck     = false;
 var dnsUpState    = false;
 var intfUpState   = false;
+var usbDeviceFile;
+var usbModemUp    = false;
 
-network = new EventEmitter();
+var activeIpAddrs    = [];
+var activeInterfaces = {};
+
+networkState   = new EventEmitter();
+intrfacesState = new EventEmitter();
 
 var setupPPPInterface = function()
 {
@@ -51,6 +54,7 @@ var setupPPPInterface = function()
             exec(cmd, function(err, stdout) {
 
                log.debug("Triggered wvdial for wwan0");
+               usbModemUp = true;
 
                clearInterval(usbIntfCheckTimer);
                usbDetectCounter  = 0;
@@ -127,6 +131,11 @@ var detectSetupUSBModem = function (callback)
       log.info ("Removed USB device " + JSON.stringify(device));
    });
 
+   if (callback) { callback(); }
+}
+
+var usbModemConnect = function()
+{
    usbDetect.find (function (err, device) {
 
       log.debug ('USB device found: ' + JSON.stringify(device));
@@ -140,7 +149,7 @@ var detectSetupUSBModem = function (callback)
 
          log.debug ("Vendor ID :" + vendorId + " Product ID :" + productId );
 
-         usbDeviceFile = "/etc/securiot/usbDeviceList/" + vendorId + ":" + productId;
+         usbDeviceFile = '/etc/' + BASE_MODULE + '/usbDeviceList/' + vendorId + ':' + productId;
          log.debug ("USB device file : " + usbDeviceFile);
 
          try {
@@ -156,8 +165,7 @@ var detectSetupUSBModem = function (callback)
                      "\" | sudo tee --append /etc/usb_modeswitch.conf";
 
                   exec(cmd, function(err, stdout, stdout) {
-                     var cmd = "sudo cat " + usbDeviceFile +
-                        ">> /etc/usb_modeswitch.conf";
+                     var cmd = "sudo cat " + usbDeviceFile + ">> /etc/usb_modeswitch.conf";
 
                      exec(cmd, function(err, stdout, stdout) {
 
@@ -178,8 +186,6 @@ var detectSetupUSBModem = function (callback)
          usbIntfCheckTimer = setInterval(setupPPPInterface, USB_INTF_TIME);
       }
    });
-
-   if (callback) { callback(); }
 }
 
 var connectivityCheckInit = function(cb)
@@ -192,13 +198,13 @@ var connectivityCheckInit = function(cb)
 
       function(callback) {
 
-         network.online = false;
-         checkInterfaceStatus(callback);
+         networkChangeEventHandler(callback);
       },
 
       function(callback) {
 
-         networkChangeEventHandler(callback);
+         networkState.online = false;
+         checkInterfaceStatus(callback);
       },
 
       function(callback) {
@@ -213,26 +219,19 @@ var connectivityCheckInit = function(cb)
 // register nerwork event handler
 var networkChangeEventHandler = function(cb)
 {
-   network.on('offline', networkDownHandler);
-   network.on('onine', networkUpHandler);
-}
+   log.debug('registering network state event handlers');
 
-var networkDownHandler = function()
-{
+   networkState.on('offline', networkDownHandler);
+   networkState.on('online', networkUpHandler);
 
-   log.debug('network Down.');
-   usbIntfCheckTimer = setInterval(setupPPPInterface, USB_INTF_TIME);
-}
+   intrfacesState.on('offline', interfacesDownHandler);
+   intrfacesState.on('online', interfacesUpHandler);
 
-var networkUpHandler = function()
-{
-
-   log.debug('network Up.');
+   if (cb) { cb(); }
 }
 var checkInterfaceStatus = function(cb)
 {
    var ipAddrs = [];
-
 
    if (intfCheck === false) {
 
@@ -240,7 +239,7 @@ var checkInterfaceStatus = function(cb)
       intfUpState = true;
       dnsUpState  = true;
 
-      log.debug('INTERFACE check');
+      log.trace('INTERFACE check');
 
       var interfaces = os.networkInterfaces();
 
@@ -256,10 +255,30 @@ var checkInterfaceStatus = function(cb)
                 log.trace(' interfaces: ' + idx + ': '  + jdx + ': '+ JSON.stringify(ipAddr));
 
                 if (ipAddr.family === 'IPv4' && !ipAddr.internal) {
-                    ipAddrs.push(ipAddr.address);
+                   ipAddrs.push(ipAddr.address);
                 }
             }
          }
+      }
+
+      if (activeIpAddrs.length != ipAddrs.length) {
+
+         if (activeIpAddrs.length == 0) {
+
+            intrfacesState.emit('online');
+         } else {
+
+            if (activeIpAddrs.length < ipAddrs.length) {
+
+               intrfacesState.emit('online');
+            } else {
+
+               intrfacesState.emit('offline');
+            }
+         }
+
+         activeIpAddrs    = ipAddrs;
+         activeInterfaces = interfaces;
       }
 
       if (ipAddrs.length === 0) {
@@ -267,17 +286,18 @@ var checkInterfaceStatus = function(cb)
          log.debug('INTERFACE DOWN' + JSON.stringify(ipAddrs));
          intfCheck   = false;
          intfUpState = false;
-         if (network.online === true) {
-         
-            network.online = false;
-            network.emit('offline');
+
+         if (networkState.online === true) {
+
+            networkState.online = false;
+            networkState.emit('offline');
          } else {
             // nothing
          }
 
       } else {
 
-         log.debug('INTERFACE OK' + JSON.stringify(ipAddrs));
+         log.trace('INTERFACE OK' + JSON.stringify(ipAddrs));
          /* check ip DNS */
          checkDns();
       }
@@ -293,9 +313,9 @@ var checkInterfaceStatus = function(cb)
 
 var checkDns = function()
 {
-    log.debug('DNS check');
+    log.trace('DNS check');
 
-    require('dns').lookup('www.microsoft.com',function(err) {
+    dns.lookup('www.microsoft.com',function(err) {
 
         if (err && err.code == "ENOTFOUND") {
 
@@ -303,17 +323,17 @@ var checkDns = function()
            intfCheck  = false;
            dnsUpState = false;
 
-           if (network.online === true) {
-           
-              network.online = false;
-              network.emit('offline');
+           if (networkState.online === true) {
+
+              networkState.online = false;
+              networkState.emit('offline');
            } else {
               // nothing
            }
 
         } else {
 
-           log.debug('DNS OK');
+           log.trace('DNS OK');
            checkNet();
         }
     })
@@ -329,7 +349,7 @@ var checkNet = function() {
 
    var IP = 'www.microsoft.com';
 
-   log.debug('PING check');
+   log.trace('PING check');
 
 
    var proc = spawn('ping', ['-v', '-n', '-c', count,'-i', delay, IP]);
@@ -343,22 +363,48 @@ var checkNet = function() {
 
          intfCheck  = false;
 
-         if (network.online === false) {
+         if (networkState.online === false) {
 
-           log.debug('PING OK');
-           network.online = true;
-           network.emit('online');
+           log.trace('PING OK');
+           networkState.online = true;
+           networkState.emit('online');
          }
 
-      } else if (network.online === true) {
+      } else if (networkState.online === true) {
 
          intfCheck  = false;
 
          log.debug('PING FAIL');
-         network.online = false;
-         network.emit('offline');
+         networkState.online = false;
+         networkState.emit('offline');
       }
    });
+}
+
+var interfacesDownHandler = function()
+{
+
+   log.debug('interface Down...');
+   usbModemConnect();
+}
+
+var interfacesUpHandler = function()
+{
+
+   log.debug('interface Up...');
+}
+
+var networkDownHandler = function()
+{
+
+   log.debug('network Down...');
+   usbModemConnect();
+}
+
+var networkUpHandler = function()
+{
+
+   log.debug('network Up...');
 }
 
 module.exports = connectivity;
