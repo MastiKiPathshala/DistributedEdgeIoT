@@ -26,7 +26,7 @@ var netCheckFlag = false;
 var usbModemUp   = false;
 
 var handleNetworkEvents   = true;
-var handleInterfaceEvents = false;
+var handleInterfaceEvents = true;
 
 var activeIpAddrs    = [];
 var activeInterfaces = {};
@@ -141,6 +141,7 @@ var usbModemConnect = function()
    usbDetect.find (function (err, device) {
 
       log.debug ('USB device(' + device.length + ') found: ' + JSON.stringify(device));
+
       var usbArray = JSON.stringify(device);
       var jsonUsbArray = JSON.parse(usbArray);
 
@@ -189,6 +190,11 @@ var usbModemConnect = function()
          usbIntfCheckTimer = setInterval(setupPPPInterface, USB_INTF_TIME);
       }
    });
+}
+
+var usbModemDisconnect = function()
+{
+   usbModemUp = false;
 }
 
 var connectivityCheckInit = function(cb)
@@ -414,6 +420,9 @@ var networkUpHandler = function()
 {
 
    log.debug('network Up...');
+   if (usbModemUp === true) {
+      usbModemDisconnect();
+   }
 }
 
 module.exports = connectivity;
