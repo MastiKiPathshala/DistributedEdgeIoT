@@ -11,7 +11,8 @@ var moment       = require('moment-timezone');
 var express      = require('express');
 var bodyParser   = require('body-parser');
 var cookieParser = require('cookie-parser');
-cloudConnect = require ('./cloud_main');
+cloudConnect     = require ('./cloud_main');
+connectivity     = require('./check_connectivity');
 
 BASE_MODULE  = 'securiot';
 HOST_HOME    = '/home/Kat@ppa';
@@ -526,6 +527,10 @@ var appSetState = function()
       function(callback) {
 
          appUpdateSystemStatus(callback);
+      },
+
+      function(callback) {
+         connectivity.connectivityCheckInit(callback);
       },
 
       // mqtt relay local and cloud client
