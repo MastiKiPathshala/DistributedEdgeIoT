@@ -23,7 +23,6 @@ var USB_INTF_TIME = 10000;
 var intfCheck     = false;
 var dnsUpState    = false;
 var intfUpState   = false;
-var usbDeviceFile;
 var usbModemUp    = false;
 
 var activeIpAddrs    = [];
@@ -85,8 +84,8 @@ var detectSetupUSBModem = function (callback)
       var vendorId  = device.vendorId.toString(16);
       var productId = device.productId.toString(16);
 
-      var usbDev = '/etc/' + BASE_MODULE + '/usbDeviceList/' + vendorId + ':' + productId;
-      log.debug ('USB device file : ' + usbDev);
+      var usbDeviceFile = '/etc/' + BASE_MODULE + '/usbDeviceList/' + vendorId + ':' + productId;
+      log.debug ('USB device file: ' + usbDeviceFile);
 
       try {
 
@@ -122,7 +121,7 @@ var detectSetupUSBModem = function (callback)
             });
          }
       } catch (e) {
-         log.debug ("Detected USB device either not a Modem or already in Modem mode");
+         log.debug ('Detected USB device either not a Modem or already in Modem mode(' + e + ')');
       }
 
    });
@@ -138,7 +137,7 @@ var usbModemConnect = function()
 {
    usbDetect.find (function (err, device) {
 
-      log.debug ('USB device found: ' + JSON.stringify(device));
+      log.debug ('USB device(' + device.length + ') found: ' + JSON.stringify(device));
       var usbArray = JSON.stringify(device);
       var jsonUsbArray = JSON.parse(usbArray);
 
@@ -149,7 +148,7 @@ var usbModemConnect = function()
 
          log.debug ("Vendor ID :" + vendorId + " Product ID :" + productId );
 
-         usbDeviceFile = '/etc/' + BASE_MODULE + '/usbDeviceList/' + vendorId + ':' + productId;
+         var usbDeviceFile = '/etc/' + BASE_MODULE + '/usbDeviceList/' + vendorId + ':' + productId;
          log.debug ("USB device file : " + usbDeviceFile);
 
          try {
@@ -160,6 +159,7 @@ var usbModemConnect = function()
                var cmd = "sudo cp /etc/usb_modeswitch.default /etc/usb_modeswitch.conf";
 
                exec(cmd, function(err, stdout, stdout) {
+
                   var cmd = "sudo echo \"\nDefaultVendor=0x" + vendorId +
                      "\nDefaultProduct=0x" + productId +
                      "\" | sudo tee --append /etc/usb_modeswitch.conf";
@@ -180,7 +180,7 @@ var usbModemConnect = function()
                });
             }
          } catch (e) {
-            log.debug ("Detected USB device either not a Modem or already in Modem mode");
+            log.debug ('Detected USB device either not a Modem or already in Modem mode(' + e + ')');
          }
 
          usbIntfCheckTimer = setInterval(setupPPPInterface, USB_INTF_TIME);
