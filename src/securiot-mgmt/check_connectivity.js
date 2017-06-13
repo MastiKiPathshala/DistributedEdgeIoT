@@ -20,10 +20,13 @@ var usbDetectCounter = 0;
 var INTF_TIME     = 20000;
 var USB_INTF_TIME = 10000;
 
-var intfCheck     = false;
-var dnsUpState    = false;
-var intfUpState   = false;
-var usbModemUp    = false;
+var dnsUpState   = false;
+var intfUpState  = false;
+var netCheckFlag = false;
+var usbModemUp   = false;
+
+var handleNetworkEvents   = true;
+var handleInterfaceEvents = false;
 
 var activeIpAddrs    = [];
 var activeInterfaces = {};
@@ -198,7 +201,7 @@ var connectivityCheckInit = function(cb)
 
       function(callback) {
 
-         networkChangeEventHandler(callback);
+         networkEventHandler(callback);
       },
 
       function(callback) {
@@ -217,27 +220,34 @@ var connectivityCheckInit = function(cb)
 }
 
 // register nerwork event handler
-var networkChangeEventHandler = function(cb)
+var networkEventHandler = function(cb)
 {
-   log.debug('registering network state event handlers');
+   log.debug('registering for network events');
 
-   networkState.on('offline', networkDownHandler);
-   networkState.on('online', networkUpHandler);
+   if (handleNetworkEvents === true) {
 
-   intrfacesState.on('offline', interfacesDownHandler);
-   intrfacesState.on('online', interfacesUpHandler);
+      networkState.on('offline', networkDownHandler);
+      networkState.on('online', networkUpHandler);
+   }
+
+   if (handleInterfaceEvents === true) {
+
+      intrfacesState.on('offline', interfacesDownHandler);
+      intrfacesState.on('online', interfacesUpHandler);
+   }
 
    if (cb) { cb(); }
 }
+
 var checkInterfaceStatus = function(cb)
 {
    var ipAddrs = [];
 
-   if (intfCheck === false) {
+   if (netCheckFlag === false) {
 
-      intfCheck   = true;
-      intfUpState = true;
-      dnsUpState  = true;
+      dnsUpState   = true;
+      intfUpState  = true;
+      netCheckFlag = true;
 
       log.trace('INTERFACE check');
 
@@ -284,8 +294,8 @@ var checkInterfaceStatus = function(cb)
       if (ipAddrs.length === 0) {
 
          log.debug('INTERFACE DOWN' + JSON.stringify(ipAddrs));
-         intfCheck   = false;
-         intfUpState = false;
+         intfUpState  = false;
+         netCheckFlag = false;
 
          if (networkState.online === true) {
 
@@ -320,8 +330,8 @@ var checkDns = function()
         if (err && err.code == "ENOTFOUND") {
 
            log.debug('DNS FAIL');
-           intfCheck  = false;
-           dnsUpState = false;
+           dnsUpState   = false;
+           netCheckFlag = false;
 
            if (networkState.online === true) {
 
@@ -339,8 +349,8 @@ var checkDns = function()
     })
 }
 
-var checkNet = function() {
-
+var checkNet = function()
+{
    var delay    = 2; // in seconds
    var count    = 5;
 
@@ -351,7 +361,6 @@ var checkNet = function() {
 
    log.trace('PING check');
 
-
    var proc = spawn('ping', ['-v', '-n', '-c', count,'-i', delay, IP]);
 
    proc.stdout.on('data', function (data) {
@@ -361,7 +370,7 @@ var checkNet = function() {
       if (data_str.test(data) ||
           stat_str.test(data)) {
 
-         intfCheck  = false;
+         netCheckFlag = false;
 
          if (networkState.online === false) {
 
@@ -372,7 +381,7 @@ var checkNet = function() {
 
       } else if (networkState.online === true) {
 
-         intfCheck  = false;
+         netCheckFlag = false;
 
          log.debug('PING FAIL');
          networkState.online = false;
