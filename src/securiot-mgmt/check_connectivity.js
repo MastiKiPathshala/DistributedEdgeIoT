@@ -29,7 +29,6 @@ var intfUpState   = false;
 
 network = new EventEmitter();
 
-
 var setupPPPInterface = function()
 {
    var cmd = 'ifconfig';
@@ -199,12 +198,37 @@ var connectivityCheckInit = function(cb)
 
       function(callback) {
 
+         networkChangeEventHandler(callback);
+      },
+
+      function(callback) {
+         // register nerwork event handler
+
          if (cb) {cb(); }
       }
 
    ]);
 }
 
+// register nerwork event handler
+var networkChangeEventHandler = function(cb)
+{
+   network.on('offline', networkDownHandler);
+   network.on('onine', networkUpHandler);
+}
+
+var networkDownHandler = function()
+{
+
+   log.debug('network Down.');
+   usbIntfCheckTimer = setInterval(setupPPPInterface, USB_INTF_TIME);
+}
+
+var networkUpHandler = function()
+{
+
+   log.debug('network Up.');
+}
 var checkInterfaceStatus = function(cb)
 {
    var ipAddrs = [];
