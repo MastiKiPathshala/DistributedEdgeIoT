@@ -379,27 +379,40 @@ var mqttRelayDataSend = function (finalData)
    }
 }
 
-var sendToCloud = function(sensorData)
+var sendToCloud = function(sensorData, callback)
 {
-   switch (cloudServerType){
+   switch (cloudServerType) {
 
-      case "azure":
-         var message = new Message (sensorData);
+   case "azure":
+      var message = new Message (sensorData);
 
-         cloudClient.sendEvent(message, function (err) {
+      cloudClient.sendEvent(message, function (err) {
 
-            if (err) {
+         if (err) {
+
+            if (callback) {
+
+               callback(err);
+            } else {
 
                log.error ("sensor data send failed : " + err.toString());
                pushDataToStorage(sensorData);
-
-            } else {
-               log.trace ("Message sent : " + message);
             }
-         });
+
+         } else {
+
+            if (callback) {
+
+               callback(err);
+            }
+            log.trace ("Message sent : " + message);
+         }
+      });
+
       break;
 
-      case "AWS":
+   case "AWS":
+
       break;
    }
 }
@@ -451,7 +464,7 @@ var getCreateOfflineDirectory = function (callback)
 
 var writeOneTuple = function (file, sensorData)
 {
-    cmd = "sudo cat " + sensorData + " >> " + file;
+    var cmd = "sudo cat " + sensorData + " >> " + file;
 
     if (!fs.existsSync(file)) {
 

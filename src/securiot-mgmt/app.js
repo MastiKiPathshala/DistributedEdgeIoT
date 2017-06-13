@@ -46,6 +46,8 @@ MANUFACTURER_TAG          = 'manufacturer';
 OFFLINE_DATA_FILE_TAG     = 'offlineDataFiles'
 
 OFFLINE_DELAY             = 5000
+FILE_DELETE_DELAY         = 2000
+
 //Global variables
 user = '';
 password = '';
