@@ -29,11 +29,11 @@ var offlineProcessData = function()
 
       redisClient.hgetall(OFFLINE_DATA_FILE_TAG, funtion(err, res) {
 
-         var processFlag = true; 
+         var processFlag = true;
          if (!err && res) {
 
             for (var file in res) {
-               processFlag = true; 
+               processFlag = true;
                offlineFiles.push(file);
             }
          }
@@ -57,13 +57,14 @@ var offlineProcessFiles = function()
 
          var rl = readline.createInterface({
                 input: fs.createReadStream(file) });
-         
+
          rl.on('line', function(linebuf) {
             offlineSendToCloud(linebuf);
          });
-         
+
          rl.on('close', function() {
             offlineDeleteFile(file);
+            setTimeout(offlineProcessFiles, OFFLINE_DELAY);
          });
 
       } else {
@@ -77,12 +78,15 @@ var offlineDeleteFile = function(file)
 {
    log.debug('offline data file ' + file + ' delete');
 
-   redisClient.hdel(OFFLINE_DATA_FILE_TAG, file, function(err, res) {
+   redisClient.hget(OFFLINE_DATA_FILE_TAG, file, function(err, res) {
 
-      if (err) {
-         log.debug('offline data file ' + file + ' delete fail from db');
-      }
-   });
+      redisClient.hdel(OFFLINE_DATA_FILE_TAG, file, function(err, res) {
+
+         if (err) {
+            log.debug('offline data file entry ' + file + ' delete fail from db');
+         }
+      });
+   }
 
    if (fs.existsSync(file)) {
       exec('sudo rm -rf ' + file);

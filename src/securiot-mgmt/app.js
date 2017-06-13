@@ -44,6 +44,7 @@ HARDWARE_SERIAL_TAG       = 'hardwareSerial';
 MANUFACTURER_TAG          = 'manufacturer';
 OFFLINE_DATA_FILE_TAG     = 'offlineDataFiles'
 
+OFFLINE_DELAY             = 5000
 //Global variables
 user = '';
 password = '';

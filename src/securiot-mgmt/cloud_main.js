@@ -508,6 +508,7 @@ var sendRemoteCmdResponse = function (response, status)
    }
 }
 
+module.exports.sendToCloud  = sendToCloud;
 module.exports.mqttLocalClientInit = mqttLocalClientInit;
 module.exports.mqttCloudClientInit = mqttCloudClientInit;
 module.exports.mqttGatewayRelayInit = mqttGatewayRelayInit;
