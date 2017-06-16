@@ -464,7 +464,7 @@ var getCreateOfflineDirectory = function (callback)
 
 var writeOneTuple = function (file, sensorData)
 {
-    var cmd = "sudo cat " + sensorData + " >> " + file;
+    var cmd = 'sudo cat ' + sensorData + ' >> ' + file;
 
     if (!fs.existsSync(file)) {
 
@@ -527,10 +527,10 @@ var sendRemoteCmdResponse = function (response, status)
 }
 
 module.exports.sendToCloud  = sendToCloud;
-module.exports.mqttLocalClientInit = mqttLocalClientInit;
-module.exports.mqttCloudClientInit = mqttCloudClientInit;
-module.exports.mqttGatewayRelayInit = mqttGatewayRelayInit;
-module.exports.updateSystemStatus  = updateSystemStatus;
+module.exports.mqttLocalClientInit    = mqttLocalClientInit;
+module.exports.mqttCloudClientInit    = mqttCloudClientInit;
+module.exports.mqttGatewayRelayInit   = mqttGatewayRelayInit;
+module.exports.updateSystemStatus     = updateSystemStatus;
 module.exports.updateRemoteCmdStatus  = updateRemoteCmdStatus;
 module.exports.sendRemoteCmdResponse  = sendRemoteCmdResponse;
 
