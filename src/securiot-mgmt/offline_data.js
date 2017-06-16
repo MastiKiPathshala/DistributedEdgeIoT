@@ -23,7 +23,7 @@ var cloudClient = require('./cloud_main');
 // on cloud/network up, check try to push the data
 
 cloudState.on('online', offlineProcess);
-networkState.on('online', offlineProcess);
+//networkState.on('online', offlineProcess);
 
 var offlineProcess = function()
 {

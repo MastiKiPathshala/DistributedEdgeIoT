@@ -29,7 +29,6 @@ var awsDM    = require('./cloud_aws_directmessage');
 
 var uniqueGetwayId;
 var cloudServerType;
-var cloudConnectStatus = false;
 
 
 var so2Count   = 0;
@@ -40,6 +39,27 @@ var humidCount = 0;
 
 cloudState     = new EventEmitter();
 
+var cloudConnectStatus = false;
+
+var cloudStateOn = function()
+{
+   // generate cloud online event
+   if (cloudConnectStatus === false) {
+
+      cloudConnectStatus = true;
+      cloudState.emit('online');
+   }
+}
+
+var cloudStateOff = function()
+{
+   // generate cloud online event
+   if (cloudConnectStatus === true) {
+
+      cloudConnectStatus = false;
+      cloudState.emit('offline');
+   }
+}
 var azureConnectCallback = function (err)
 {
    if (err) {
@@ -56,6 +76,7 @@ var azureConnectCallback = function (err)
       cloudClient.onDeviceMethod('reboot', azureDM.onReboot);
       cloudClient.onDeviceMethod('configReset', azureDM.onConfigReset);
       cloudClient.onDeviceMethod('remoteDiagnostics', azureDM.onRemoteDiagnostics);
+
    }
 };
 
@@ -404,12 +425,7 @@ var sendToCloud = function(sensorData, callback)
 
             }
 
-            // generate cloud offline event
-            if (cloudConnectStatus === true) {
-
-               cloudConnectStatus = false;
-               cloudState.emit('offline');
-            }
+            cloudStateOn();
 
          } else {
 
@@ -418,12 +434,8 @@ var sendToCloud = function(sensorData, callback)
                callback(err);
             }
 
-            // generate cloud online event
-            if (cloudConnectStatus === false) {
-
-               cloudConnectStatus = true;
-               cloudState.emit('online');
-            }
+            cloudStateOff();
+{
             log.trace ("Message sent : " + message);
          }
       });
