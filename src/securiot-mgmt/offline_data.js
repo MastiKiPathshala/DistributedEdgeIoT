@@ -130,13 +130,16 @@ var offlineFlushFile = function(file, writeBuffer)
 
       redisClient.hget(OFFLINE_DATA_FILE_TAG, file, function(err, res) {
 
-         redisClient.hdel(OFFLINE_DATA_FILE_TAG, file, function(err, res) {
+         if (!err && res) {
 
-            if (err) {
-               log.debug('offline data file entry ' + file + ' delete fail from db');
-            }
-         });
-      }
+            redisClient.hdel(OFFLINE_DATA_FILE_TAG, file, function(err, res) {
+
+               if (err) {
+                  log.debug('offline data file entry ' + file + ' delete fail from db');
+               }
+            });
+         }
+      });
 
    } else {
 
