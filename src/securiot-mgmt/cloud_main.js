@@ -27,6 +27,8 @@ var awsIoT   = require('aws-iot-device-sdk');
 var awsTS    = require('./cloud_aws_thingshadow');
 var awsDM    = require('./cloud_aws_directmessage');
 
+var EventEmitter = require('events').EventEmitter;
+
 var uniqueGetwayId;
 var cloudServerType;
 
@@ -435,7 +437,7 @@ var sendToCloud = function(sensorData, callback)
             }
 
             cloudStateOff();
-{
+
             log.trace ("Message sent : " + message);
          }
       });
