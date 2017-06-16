@@ -453,7 +453,7 @@ var getCreateOfflineDirectory = function (callback)
    // create the direcotry
    if (!fs.existsSync(directory)) {
 
-       var cmd = "sudo makdir -p " + directory;
+       var cmd = 'sudo mkdir -p ' + directory;
        exec (cmd, function () {
           callback (directory);
        });
@@ -468,12 +468,17 @@ var writeOneTuple = function (file, sensorData)
 
     if (!fs.existsSync(file)) {
 
-        redisCli.hmset(OFFLINE_DATA_FILE_TAG, file,
+        redisClient.hget(OFFLINE_DATA_FILE_TAG, file, function(err, res) {
 
-           function(err, res) {
-             if (err) {
-                log.debug('offline file entry add fail, ' + file);
-             }
+           if (err || res) {
+              redisClient.hmset(OFFLINE_DATA_FILE_TAG, file, file,
+
+                 function(err, res) {
+                   if (err) {
+                      log.debug('offline file entry add fail, ' + file);
+                   }
+              });
+           }
         });
     }
 
