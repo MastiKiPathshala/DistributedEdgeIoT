@@ -20,8 +20,9 @@ var offlineFiles = {};
 
 var cloudClient = require('./cloud_main');
 
-// on network up, check try to push the data
+// on cloud/network up, check try to push the data
 
+cloudState.on('online', offlineProcess);
 networkState.on('online', offlineProcess);
 
 var offlineProcess = function()
@@ -143,7 +144,7 @@ var offlineFlushFile = function(file, writeBuffer)
 
    } else {
 
-      var cmd = "sudo cat " + writeBuffer + " >> " + file;
+      var cmd = 'sudo cat ' + writeBuffer + ' >> ' + file;
 
       exec (cmd, function () {
 

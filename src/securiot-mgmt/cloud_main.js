@@ -29,12 +29,16 @@ var awsDM    = require('./cloud_aws_directmessage');
 
 var uniqueGetwayId;
 var cloudServerType;
+var cloudConnectStatus = false;
+
 
 var so2Count   = 0;
 var no2Count   = 0;
 var gpsCount   = 0;
 var tempCount  = 0;
 var humidCount = 0;
+
+cloudState     = new EventEmitter();
 
 var azureConnectCallback = function (err)
 {
@@ -397,6 +401,14 @@ var sendToCloud = function(sensorData, callback)
 
                log.error ("sensor data send failed : " + err.toString());
                pushDataToStorage(sensorData);
+
+            }
+
+            // generate cloud offline event
+            if (cloudConnectStatus === true) {
+
+               cloudConnectStatus = false;
+               cloudState.emit('offline');
             }
 
          } else {
@@ -404,6 +416,13 @@ var sendToCloud = function(sensorData, callback)
             if (callback) {
 
                callback(err);
+            }
+
+            // generate cloud online event
+            if (cloudConnectStatus === false) {
+
+               cloudConnectStatus = true;
+               cloudState.emit('online');
             }
             log.trace ("Message sent : " + message);
          }
