@@ -55,13 +55,14 @@ var setupPPPInterface = function()
 
             exec(cmd, function(err, stdout) {
 
-               log.debug("Triggered wvdial for wwan0");
+               log.debug("Triggered wvdial for wwan0:" + err);
                usbModemUp = true;
 
                clearInterval(usbIntfCheckTimer);
                usbDetectCounter  = 0;
             });
          });
+
       } else {
 
          log.trace(' wwan0 not found, retry count: ' + usbDetectCounter);
@@ -94,6 +95,7 @@ var detectSetupUSBModem = function (callback)
 
          if (fs.statSync(usbDeviceFile).isFile()) {
 
+            log.debug ('Detected USB modem device (' + usbDeviceFilee + ')');
             // CREATE usb_modeswitch.conf file)
 
             log.info ("Detected USB Modem in Storage Media mode");
@@ -124,7 +126,7 @@ var detectSetupUSBModem = function (callback)
             });
          }
       } catch (e) {
-         log.debug ('Detected USB device either not a Modem or already in Modem mode(' + e + ')');
+         log.trace ('Detected USB device either not a Modem or already in Modem mode(' + e + ')');
       }
 
    });
@@ -168,7 +170,9 @@ var usbModemConnect = function()
                      "\nDefaultProduct=0x" + productId +
                      "\" | sudo tee --append /etc/usb_modeswitch.conf";
 
+                  log.debug ('Executing USB mode switch conf: ' + cmd);
                   exec(cmd, function(err, stdout, stdout) {
+
                      var cmd = "sudo cat " + usbDeviceFile + ">> /etc/usb_modeswitch.conf";
 
                      exec(cmd, function(err, stdout, stdout) {
