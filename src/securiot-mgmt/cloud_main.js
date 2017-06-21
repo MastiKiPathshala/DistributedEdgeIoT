@@ -102,6 +102,7 @@ var awsConnectCallback = function (err)
       cloudClient.on ('update', awsTS.updateCallback);
       cloudClient.on('status', awsTS.statusCallback);
       cloudClient.on('message', awsDM.messageCallback);
+
       cloudClient.register (deviceId, { ignoreDeltas: true },
          function (err, failedTopics) {
             if ((err === undefined) && (failedTopics === undefined)) {
@@ -119,10 +120,13 @@ var awsReconnectCallback = function (err)
    } else {
 
       log.debug('AWS Cloud Client reconnected');
+
       awsRemoteConfigTopic = awsBaseTopic+'/topic/remoteconfig';
       cloudClient.on ('update', awsTS.updateCallback);
       cloudClient.on('status', awsTS.statusCallback);
+
       cloudClient.register (deviceId, { ignoreDeltas: true },
+
          function (err, failedTopics) {
             if ((err === undefined) && (failedTopics === undefined)) {
                cloudClient.subscribe (awsRemoteConfigTopic);
@@ -223,6 +227,7 @@ var mqttCloudClientInit = function (callback)
          break;
       }
    }
+
    if (callback) { callback(); }
 }
 
@@ -559,11 +564,10 @@ var sendRemoteCmdResponse = function (response, status)
    }
 }
 
-module.exports.sendToCloud  = sendToCloud;
-module.exports.mqttLocalClientInit    = mqttLocalClientInit;
-module.exports.mqttCloudClientInit    = mqttCloudClientInit;
-module.exports.mqttGatewayRelayInit   = mqttGatewayRelayInit;
-module.exports.updateSystemStatus     = updateSystemStatus;
-module.exports.updateRemoteCmdStatus  = updateRemoteCmdStatus;
-module.exports.sendRemoteCmdResponse  = sendRemoteCmdResponse;
-
+module.exports.sendToCloud           = sendToCloud;
+module.exports.updateSystemStatus    = updateSystemStatus;
+module.exports.mqttCloudClientInit   = mqttCloudClientInit;
+module.exports.mqttLocalClientInit   = mqttLocalClientInit;
+module.exports.mqttGatewayRelayInit  = mqttGatewayRelayInit;
+module.exports.sendRemoteCmdResponse = sendRemoteCmdResponse;
+module.exports.updateRemoteCmdStatus = updateRemoteCmdStatus;
