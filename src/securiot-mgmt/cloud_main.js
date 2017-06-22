@@ -27,8 +27,11 @@ var awsIoT   = require('aws-iot-device-sdk');
 var awsTS    = require('./cloud_aws_thingshadow');
 var awsDM    = require('./cloud_aws_directmessage');
 
+var EventEmitter = require('events').EventEmitter;
+
 var uniqueGetwayId;
 var cloudServerType;
+
 
 var so2Count   = 0;
 var no2Count   = 0;
@@ -36,53 +39,48 @@ var gpsCount   = 0;
 var tempCount  = 0;
 var humidCount = 0;
 
-CLOUD_CONNECT_DEF_TIMEOUT = 1 * 1000 // 1 second
-CLOUD_CONNECT_MAX_TIMEOUT = 128 * 1000 // 
+cloudState     = new EventEmitter();
 
-var cloudConnectTimer;
-var cloudConnectTimeout = CLOUD_CONNECT_DEF_TIMEOUT;
+var cloudConnectStatus = false;
 
-var cloudClientClose = function()
+var cloudStateOn = function()
 {
-   log.error('Azure Cloud Client closed');
+   // generate cloud online event
+   if (cloudConnectStatus === false) {
+
+      cloudConnectStatus = true;
+      cloudState.emit('online');
+   }
 }
 
-var azureDisconnectCallback = function()
+var cloudStateOff = function()
 {
-	log.error('Azure Cloud Client disconnected');
-	cloudClient.removeAllListeners();
-	cloudClient.close(azureCloseCallback);
-}
+   // generate cloud online event
+   if (cloudConnectStatus === true) {
 
-var cloudClientError = function()
-{
-   log.error('Azure Cloud Client connection error');
+      cloudConnectStatus = false;
+      cloudState.emit('offline');
+   }
 }
 
 var azureConnectCallback = function (err)
 {
-	if (err) {
-		log.error('Azure Cloud Client connection failed : ' + err);
-		//cloudClient.removeAllListeners();
-		//cloudClient.close(azureCloseCallback);
-	} else {
-		log.debug('Azure Cloud Client connected');
-		if (cloudConnectTimer) {
-			log.debug ("Azure Cloud connect timer was running, stopping now...");
-			clearTimeout (cloudConnectTimer);
-			cloudConnectTimeout = CLOUD_CONNECT_DEF_TIMEOUT;
-		}
-		//cloudClient.on('message', azureC2D.onC2DMessage);
-		cloudClient.on('disconnect', azureDisconnectCallback);
-		cloudClient.on('close', cloudClientClose);
-		cloudClient.on('error', cloudClientError);
-		//client.receive (function (err, res, msg) {
-		cloudClient.getTwin(azureDT.onConfigChange);
-		cloudClient.onDeviceMethod('softwareUpGrade', azureDM.onSoftwareUpgrade);
-		cloudClient.onDeviceMethod('reboot', azureDM.onReboot);
-		cloudClient.onDeviceMethod('configReset', azureDM.onConfigReset);
-		cloudClient.onDeviceMethod('remoteDiagnostics', azureDM.onRemoteDiagnostics);
-	}
+   if (err) {
+      log.error('Azure Cloud Client connection failed : ' + err);
+   //   setInterval (function () {
+   //      cloudClient.open (azureConnectCallback);
+   //   }, 1000);
+   } else {
+      log.debug('Azure Cloud Client connected');
+      cloudClient.on('message', azureC2D.onC2DMessage);
+      //client.receive (function (err, res, msg) {
+      cloudClient.getTwin(azureDT.onConfigChange);
+      cloudClient.onDeviceMethod('softwareUpGrade', azureDM.onSoftwareUpgrade);
+      cloudClient.onDeviceMethod('reboot', azureDM.onReboot);
+      cloudClient.onDeviceMethod('configReset', azureDM.onConfigReset);
+      cloudClient.onDeviceMethod('remoteDiagnostics', azureDM.onRemoteDiagnostics);
+
+   }
 };
 
 var azureCloseCallback = function (err, result)
@@ -118,6 +116,7 @@ var awsConnectCallback = function (err)
       cloudClient.on ('update', awsTS.updateCallback);
       cloudClient.on('status', awsTS.statusCallback);
       cloudClient.on('message', awsDM.messageCallback);
+
       cloudClient.register (deviceId, { ignoreDeltas: true },
          function (err, failedTopics) {
             if ((err === undefined) && (failedTopics === undefined)) {
@@ -135,10 +134,13 @@ var awsReconnectCallback = function (err)
    } else {
 
       log.debug('AWS Cloud Client reconnected');
+
       awsRemoteConfigTopic = awsBaseTopic+'/topic/remoteconfig';
       cloudClient.on ('update', awsTS.updateCallback);
       cloudClient.on('status', awsTS.statusCallback);
+
       cloudClient.register (deviceId, { ignoreDeltas: true },
+
          function (err, failedTopics) {
             if ((err === undefined) && (failedTopics === undefined)) {
                cloudClient.subscribe (awsRemoteConfigTopic);
@@ -351,6 +353,7 @@ var mqttCloudClientInit = function (callback)
          break;
       }
    }
+
    if (callback) { callback(); }
 }
 
@@ -534,28 +537,47 @@ var mqttRelayDataSend = function (finalData,forwardingRule)
    }
 }
 
-var sendToCloud = function(sensorData)
+var sendToCloud = function(sensorData, callback)
 {
 	log.trace("data to be send to the azure cloud: "+sensorData);
-   switch (cloudServerType){
+	switch (cloudServerType) {
 
-      case "azure":
-         var message = new Message (sensorData);
+   case "azure":
+      var message = new Message (sensorData);
 
-         cloudClient.sendEvent(message, function (err) {
+      cloudClient.sendEvent(message, function (err) {
 
-            if (err) {
+         if (err) {
+
+            if (callback) {
+
+               callback(err);
+            } else {
 
                log.error ("sensor data send failed : " + err.toString());
                pushDataToStorage(sensorData);
 
-            } else {
-               log.trace ("Message sent : " + message);
             }
-         });
+
+            cloudStateOn();
+
+         } else {
+
+            if (callback) {
+
+               callback(err);
+            }
+
+            cloudStateOff();
+
+            log.trace ("Message sent : " + message);
+         }
+      });
+
       break;
 
-      case "AWS":
+   case "AWS":
+
       break;
    }
 }
@@ -596,7 +618,7 @@ var getCreateOfflineDirectory = function (callback)
    // create the direcotry
    if (!fs.existsSync(directory)) {
 
-       var cmd = "sudo mkdir -p " + directory;
+       var cmd = 'sudo mkdir -p ' + directory;
        exec (cmd, function () {
           callback (directory);
        });
@@ -607,7 +629,7 @@ var getCreateOfflineDirectory = function (callback)
 
 var writeOneTuple = function (file, sensorData)
 {
-    cmd = "sudo cat " + sensorData + " >> " + file;
+    var cmd = 'sudo cat ' + sensorData + ' >> ' + file;
 
     if (!fs.existsSync(file)) {
 
@@ -670,11 +692,10 @@ var sendRemoteCmdResponse = function (response, status)
    }
 }
 
-module.exports.sendToCloud  = sendToCloud;
-module.exports.mqttLocalClientInit = mqttLocalClientInit;
-module.exports.mqttCloudClientInit = mqttCloudClientInit;
-module.exports.mqttGatewayRelayInit = mqttGatewayRelayInit;
-module.exports.updateSystemStatus  = updateSystemStatus;
-module.exports.updateRemoteCmdStatus  = updateRemoteCmdStatus;
-module.exports.sendRemoteCmdResponse  = sendRemoteCmdResponse;
-
+module.exports.sendToCloud           = sendToCloud;
+module.exports.updateSystemStatus    = updateSystemStatus;
+module.exports.mqttCloudClientInit   = mqttCloudClientInit;
+module.exports.mqttLocalClientInit   = mqttLocalClientInit;
+module.exports.mqttGatewayRelayInit  = mqttGatewayRelayInit;
+module.exports.sendRemoteCmdResponse = sendRemoteCmdResponse;
+module.exports.updateRemoteCmdStatus = updateRemoteCmdStatus;

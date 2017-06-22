@@ -20,19 +20,26 @@ var offlineFiles = {};
 
 var cloudClient = require('./cloud_main');
 
-network.on("online", offlineProcessData);
+// on cloud/network up, check try to push the data
 
-var offlineProcessData = function()
+cloudState.on('online', offlineProcess);
+//networkState.on('online', offlineProcess);
+
+var offlineProcess = function()
 {
 
    if (redisClient) {
 
       redisClient.hgetall(OFFLINE_DATA_FILE_TAG, funtion(err, res) {
 
-         var processFlag = true;
+         var processFlag = false;
+
          if (!err && res) {
 
+            // store in a list, for later processing
+
             for (var file in res) {
+
                processFlag = true;
                offlineFiles.push(file);
             }
@@ -41,15 +48,16 @@ var offlineProcessData = function()
          log.debug('processing offline data file (' + file);
 
          if (processFlag === true) {
-            offlineProcessFiles();
+            offlineProcessFile();
          }
       });
    }
 }
 
-var offlineProcessFiles = function()
+var offlineProcessFile = function()
 {
    var file = offlineFiles.slice(0, 1);
+   var writeBufer = {};
 
    if (file != undefined) {
 
@@ -58,13 +66,37 @@ var offlineProcessFiles = function()
          var rl = readline.createInterface({
                 input: fs.createReadStream(file) });
 
+         // read line by line to push data
+
          rl.on('line', function(linebuf) {
-            offlineSendToCloud(linebuf);
+
+            if (networkState.online === true) {
+
+               offlineSendToCloud(linebuf, function(err) {
+
+                  if (err) {
+                     writeBuffer.push(linebuf);
+                  }
+               });
+            } else {
+
+               writeBuffer.push(linebuf);
+            }
          });
 
+         // when read, pick the next file
+         // also mark current file for delete
+
          rl.on('close', function() {
-            offlineDeleteFile(file);
-            setTimeout(offlineProcessFiles, OFFLINE_DELAY);
+
+            if (writeBuffer.length === 0) {
+
+               setTimeout(offlineProcessFile, OFFLINE_DELAY);
+               setTimeout(offlineDeleteFile(file), FILE_DELETE_DELAY);;
+            } else {
+
+               setTimeout(offlineDeleteFile(file, writeBuffer), FILE_DELETE_DELAY);;
+            }
          });
 
       } else {
@@ -74,25 +106,51 @@ var offlineProcessFiles = function()
    }
 }
 
-var offlineDeleteFile = function(file)
+var offlineDeleteFile = function(file, writeBuffer)
 {
    log.debug('offline data file ' + file + ' delete');
 
-   redisClient.hget(OFFLINE_DATA_FILE_TAG, file, function(err, res) {
+   if (fs.existsSync(file)) {
 
-      redisClient.hdel(OFFLINE_DATA_FILE_TAG, file, function(err, res) {
+      exec('sudo rm -rf ' + file, function() {
 
-         if (err) {
-            log.debug('offline data file entry ' + file + ' delete fail from db');
+         log.debug('offline data file ' + file + ' deleted');
+         offlineFlushFile(file, writeBuffer);
+      });
+
+   } else {
+
+      offlineFlushFile(file, writeBuffer);
+   }
+
+}
+
+var offlineFlushFile = function(file, writeBuffer)
+{
+   if (typeof writeBuffer === undefined) {
+
+      redisClient.hget(OFFLINE_DATA_FILE_TAG, file, function(err, res) {
+
+         if (!err && res) {
+
+            redisClient.hdel(OFFLINE_DATA_FILE_TAG, file, function(err, res) {
+
+               if (err) {
+                  log.debug('offline data file entry ' + file + ' delete fail from db');
+               }
+            });
          }
       });
-   }
 
-   if (fs.existsSync(file)) {
-      exec('sudo rm -rf ' + file);
-      log.debug('offline data file ' + file + ' deleted');
-   }
+   } else {
 
+      var cmd = 'sudo cat ' + writeBuffer + ' >> ' + file;
+
+      exec (cmd, function () {
+
+         log.trace ("Message stored offline");
+      });
+   }
 }
 
 var offlineSendToCloud = function(message, callback)
