@@ -17,7 +17,8 @@ connectivity     = require('./check_connectivity');
 BASE_MODULE  = 'securiot';
 HOST_HOME    = '/home/Kat@ppa';
 
-BASE_DIR     = HOST_HOME + '/' + BASE_MODULE + '-gateway/';
+//BASE_DIR     = HOST_HOME + '/' + BASE_MODULE + '-gateway/';
+BASE_DIR     = '/home/Kat@ppa/github/SecurIoT/';
 WORKING_DIR  = BASE_DIR + 'src/';
 
 SVC_MODULE      = BASE_MODULE + '-mgmt';

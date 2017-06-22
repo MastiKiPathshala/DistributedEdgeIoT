@@ -45,6 +45,30 @@
 		"mapped-asset-id": "b1290jkl"
 	}
 	
-	]	
+	],
+		"forwarding_rules":  
+    {
+	    "default": {
+	
+		    "match" : { 
+				"data_type" :"any" 
+			},
+		
+			"then": {
+				"send_to" :"cloud"
+			}
+		},
+		
+		"analytics": {
+		
+			"match" : {
+				"data_type" :"HY" 
+			},
+		
+			"then": {
+				"send_to":"analytics"
+			}
+		}
+	}
   }
 }

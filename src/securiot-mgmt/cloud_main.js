@@ -36,23 +36,53 @@ var gpsCount   = 0;
 var tempCount  = 0;
 var humidCount = 0;
 
+CLOUD_CONNECT_DEF_TIMEOUT = 1 * 1000 // 1 second
+CLOUD_CONNECT_MAX_TIMEOUT = 128 * 1000 // 
+
+var cloudConnectTimer;
+var cloudConnectTimeout = CLOUD_CONNECT_DEF_TIMEOUT;
+
+var cloudClientClose = function()
+{
+   log.error('Azure Cloud Client closed');
+}
+
+var azureDisconnectCallback = function()
+{
+	log.error('Azure Cloud Client disconnected');
+	cloudClient.removeAllListeners();
+	cloudClient.close(azureCloseCallback);
+}
+
+var cloudClientError = function()
+{
+   log.error('Azure Cloud Client connection error');
+}
+
 var azureConnectCallback = function (err)
 {
-   if (err) {
-      log.error('Azure Cloud Client connection failed : ' + err);
-   //   setInterval (function () {
-   //      cloudClient.open (azureConnectCallback);
-   //   }, 1000);
-   } else {
-      log.debug('Azure Cloud Client connected');
-      cloudClient.on('message', azureC2D.onC2DMessage);
-      //client.receive (function (err, res, msg) {
-      cloudClient.getTwin(azureDT.onConfigChange);
-      cloudClient.onDeviceMethod('softwareUpGrade', azureDM.onSoftwareUpgrade);
-      cloudClient.onDeviceMethod('reboot', azureDM.onReboot);
-      cloudClient.onDeviceMethod('configReset', azureDM.onConfigReset);
-      cloudClient.onDeviceMethod('remoteDiagnostics', azureDM.onRemoteDiagnostics);
-   }
+	if (err) {
+		log.error('Azure Cloud Client connection failed : ' + err);
+		//cloudClient.removeAllListeners();
+		//cloudClient.close(azureCloseCallback);
+	} else {
+		log.debug('Azure Cloud Client connected');
+		if (cloudConnectTimer) {
+			log.debug ("Azure Cloud connect timer was running, stopping now...");
+			clearTimeout (cloudConnectTimer);
+			cloudConnectTimeout = CLOUD_CONNECT_DEF_TIMEOUT;
+		}
+		//cloudClient.on('message', azureC2D.onC2DMessage);
+		cloudClient.on('disconnect', azureDisconnectCallback);
+		cloudClient.on('close', cloudClientClose);
+		cloudClient.on('error', cloudClientError);
+		//client.receive (function (err, res, msg) {
+		cloudClient.getTwin(azureDT.onConfigChange);
+		cloudClient.onDeviceMethod('softwareUpGrade', azureDM.onSoftwareUpgrade);
+		cloudClient.onDeviceMethod('reboot', azureDM.onReboot);
+		cloudClient.onDeviceMethod('configReset', azureDM.onConfigReset);
+		cloudClient.onDeviceMethod('remoteDiagnostics', azureDM.onRemoteDiagnostics);
+	}
 };
 
 var azureCloseCallback = function (err, result)
@@ -60,7 +90,20 @@ var azureCloseCallback = function (err, result)
    if (err) {
       log.debug ("Azure Cloud connection close failed: " + err);
    } else {
-      log.debug ("Azure Cloud connection closed : " + result);
+      log.debug ("Azure Cloud connection closed : " + JSON.stringify(result));
+		//cloudClient.open (azureConnectCallback);
+		if (cloudConnectTimer == null) {
+			log.debug ("Azure Cloud connect timer not running, starting now...");
+			if (cloudConnectTimeout < CLOUD_CONNECT_MAX_TIMEOUT) {
+				cloudConnectTimeout = 2 * cloudConnectTimeout;
+			}
+			log.debug ("Retrying Azure Cloud connection in " + cloudConnectTimeout/1000 + " seconds");
+			cloudConnectTimer = setTimeout (function () {
+				cloudClient.open (azureConnectCallback);
+			}, cloudConnectTimeout);
+		} else {
+			log.debug ("Azure Cloud connect timer already running, doing nothing...");
+		}
    }
 }
 
@@ -135,6 +178,18 @@ var awsErrorCallback = function (err)
 var mqttLocalClientInit = function(callback)
 {
    log.debug('MQTT local broker init');
+   exec('cat /sys/class/net/eth0/address',
+
+      function (error, stdout, stderr) {
+
+         if (error != null) {
+               log.debug('exec error: ' + error);
+         }
+
+         var wlan       = stdout;
+         var mac        = wlan.split("\n");
+         uniqueGetwayId = mac[0].toString();
+   });
 
    if (fs.existsSync('/etc/securiot.in/config.txt')) {
 
@@ -143,6 +198,106 @@ var mqttLocalClientInit = function(callback)
 
       forwardingRule = parsedConfigData.gatewaySaurabhpi.forwarding_rules;
       localClient    = mqtt.connect('mqtt://localhost')
+      localClient.on('connect', function () {
+
+         log.debug('Local MQTT Client connected, setting up subscriptions');
+         localClient.subscribe('no2-data');
+         localClient.subscribe('so2-data');
+         localClient.subscribe('gps-data');
+         localClient.subscribe('temp-data');
+         localClient.subscribe('humid-data');
+	  })
+      localClient.on('message', function (topic, data) {
+
+         log.trace("data from securiot-gpio daemon: "+data.toString());
+
+         var now = moment();
+         var currentTime   = now.tz("America/New_York").format('YYYY-MM-DDTHH:mm:ss.SSSZZ');
+
+         switch (topic) {
+
+         case "gps-data":
+
+            gpsCount ++;
+
+            var gpsData       = data.toString();
+            var splitOutput   = gpsData.split("-");
+            var healthScore   = parseFloat(splitOutput[0]);
+            var finalScore    = healthScore*2.5;
+            var finalGpsData  = JSON.stringify({ sno : gpsCount.toString(), gatewayId : uniqueGetwayId,
+                   sensorId : "gps-"+uniqueGetwayId, dataType : splitOutput[2],
+                   latitude : splitOutput[0], longitude : splitOutput[1],time : currentTime,
+                   qualityScore :finalScore })
+
+            mqttRelayDataSend (finalGpsData,forwardingRule);
+            break;
+
+         case "temp-data":
+
+            tempCount ++;
+
+            var tempData      = data.toString();
+            var splitTemp     = tempData.split("-");
+            var makeTempData  = parseFloat(splitTemp[0]);
+            var finalTemp     = makeTempData*3.0;
+            var finalScore    = finalTemp + 12;
+            var finalTempData = JSON.stringify({sno : tempCount.toString(), gatewayId : uniqueGetwayId,
+                     sensorId : "temp-"+uniqueGetwayId, dataType : splitTemp[2],
+                     temperature : finalTemp ,time : currentTime,qualityScore :finalScore})
+
+            mqttRelayDataSend (finalTempData,forwardingRule);
+            break;
+
+         case "humid-data":
+
+            humidCount ++;
+
+            var humidData      = data.toString();
+            var splitHumid     = humidData.split("-");
+            var makeHumidData  = parseFloat(splitHumid[1]);
+            var finalHumid     = makeHumidData+20.0;
+            var finalScore     = finalHumid -18;
+            var finalHumidData = JSON.stringify({sno :humidCount.toString(), gatewayId : uniqueGetwayId,
+                     sensorId : "humid-"+uniqueGetwayId, dataType : splitHumid[2],
+                     humidity : finalHumid ,time : currentTime,qualityScore :finalScore})
+
+            mqttRelayDataSend (finalHumidData,forwardingRule);
+            break;
+
+         case "no2-data":
+
+            no2Count ++;
+
+            var no2Data      = data.toString();
+            var splitNo2     = no2Data.split("-");
+            var makeNo2Data  = parseFloat(splitNo2[0]);
+            var finalNo2     = makeNo2Data+7.0;
+            var finalScore   = finalNo2 + 14;
+            var finalNo2Data = JSON.stringify({sno : no2Count.toString(), gatewayId : uniqueGetwayId,
+                     sensorId : "no2-"+uniqueGetwayId, dataType : splitNo2[2],
+                     no2 : finalNo2 ,time : currentTime,qualityScore :finalScore})
+
+            mqttRelayDataSend (finalNo2Data,forwardingRule);
+             break;
+
+         case "so2-data":
+
+            so2Count ++
+
+            var so2Data      = data.toString();
+            var splitSo2     = so2Data.split("-");
+            var makeSo2Data  = parseFloat(splitSo2[0]);
+            var finalSo2     = makeSo2Data+15.0;
+            var finalScore   = finalSo2 -5;
+            var finalSo2Data = JSON.stringify({sno : so2Count.toString(), gatewayId : uniqueGetwayId,
+                     sensorId : "so2-"+uniqueGetwayId, dataType : splitSo2[2],
+                     so2 : finalSo2,time : currentTime ,qualityScore :finalScore})
+
+            mqttRelayDataSend (finalSo2Data,forwardingRule);
+            break;
+         }
+      });
+     // });
    }
    if (callback) { callback(); }
 }
@@ -167,7 +322,7 @@ var mqttCloudClientInit = function (callback)
          clientFromConnectionString = require('azure-iot-device-'+protocol).clientFromConnectionString;
 
          cloudClient = clientFromConnectionString(connectionString);
-         var Message = azureIoT.Message;
+         Message = azureIoT.Message;
          cloudClient.open (azureConnectCallback);
          break;
 
@@ -236,7 +391,7 @@ var mqttGatewayRelayInit = function(callback)
 
       localClient.on('message', function (topic, data) {
 
-         //log.debug(data.toString());
+         log.debug(data.toString());
 
          var now = moment();
          var currentTime   = now.tz("America/New_York").format('YYYY-MM-DDTHH:mm:ss.SSSZZ');
@@ -329,19 +484,19 @@ var mqttGatewayRelayInit = function(callback)
    if (callback) { callback(); }
 }
 
-var mqttRelayDataSend = function (finalData)
+var mqttRelayDataSend = function (finalData,forwardingRule)
 {
-   log.debug(finalData);
+   log.trace("data from local broker: "+finalData);
 
    var dataForForwarding = new Message(finalData);
 
    for (var rule in forwardingRule) {
-
+	
       switch (forwardingRule[rule].match.data_type) {
-
+		
       case "any":
 
-         switch(forwardingRule[rule].than.send_to) {
+         switch(forwardingRule[rule].then.send_to) {
 
          case "cloud":
             sendToCloud(finalData);
@@ -381,6 +536,7 @@ var mqttRelayDataSend = function (finalData)
 
 var sendToCloud = function(sensorData)
 {
+	log.trace("data to be send to the azure cloud: "+sensorData);
    switch (cloudServerType){
 
       case "azure":
@@ -440,7 +596,7 @@ var getCreateOfflineDirectory = function (callback)
    // create the direcotry
    if (!fs.existsSync(directory)) {
 
-       var cmd = "sudo makdir -p " + directory;
+       var cmd = "sudo mkdir -p " + directory;
        exec (cmd, function () {
           callback (directory);
        });
@@ -455,12 +611,18 @@ var writeOneTuple = function (file, sensorData)
 
     if (!fs.existsSync(file)) {
 
-        redisCli.hmset(OFFLINE_DATA_FILE_TAG, file,
+        redisClient.hget(OFFLINE_DATA_FILE_TAG, file, function(err, res) {
 
-           function(err, res) {
-             if (err) {
-                log.debug('offline file entry add fail, ' + file);
-             }
+           if (err || (res === null)) {
+
+               redisClient.hmset(OFFLINE_DATA_FILE_TAG, file, file,
+               
+                  function(err, res) {
+                    if (err) {
+                       log.debug('offline file entry add fail, ' + file);
+                    }
+               });
+           }
         });
     }
 

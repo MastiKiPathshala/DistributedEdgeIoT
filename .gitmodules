@@ -1,0 +1,6 @@
+[submodule "thirdparty/src/go-bluetooth"]
+	path = thirdparty/src/go-bluetooth
+	url = https://github.com/muka/go-bluetooth
+[submodule "thirdparty/src/github.com/muka/go-bluetooth"]
+	path = thirdparty/src/github.com/muka/go-bluetooth
+	url = https://github.com/muka/go-bluetooth
