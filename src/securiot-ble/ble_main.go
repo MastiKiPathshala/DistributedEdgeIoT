@@ -22,6 +22,7 @@ import (
     "io/ioutil"
     "encoding/json"
 	"sync"
+	"time"
 	"flag"
 	"os"
 	MQTT "github.com/eclipse/paho.mqtt.golang"
@@ -169,6 +170,9 @@ func ReadConfigFiles (){
 	sensorConfig := secLevelMachineInfo["sensor-config"].([]interface{})
 	len := len( sensorConfig )
 	log.Debug("Warning",len)
+	BleSensor ()
+
+	wg.Add (3)
 /*	
 	for i := 0; i< len; i++ {
 	
@@ -192,6 +196,14 @@ func ReadConfigFiles (){
     wg.Wait()
 	
 }
+
+func BleSensor(){
+	
+	    time.AfterFunc(1000*time.Millisecond, BleSensor)
+	    log.Warning("BLE test running")
+		
+}
+
 /* 
 func ConfigureHardWare (connectionProtocol, hwName string){
      
