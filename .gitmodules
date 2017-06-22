@@ -1,6 +1,9 @@
-[submodule "thirdparty/src/go-bluetooth"]
-	path = thirdparty/src/go-bluetooth
-	url = https://github.com/muka/go-bluetooth
+[submodule "thirdparty/src/github.com/eclipse/paho.mqtt.golang"]
+	path = thirdparty/src/github.com/eclipse/paho.mqtt.golang
+	url = https://github.com/eclipse/paho.mqtt.golang
+[submodule "thirdparty/src/github.com/op/go-logging"]
+	path = thirdparty/src/github.com/op/go-logging
+	url = https://github.com/op/go-logging
 [submodule "thirdparty/src/github.com/muka/go-bluetooth"]
 	path = thirdparty/src/github.com/muka/go-bluetooth
 	url = https://github.com/muka/go-bluetooth
