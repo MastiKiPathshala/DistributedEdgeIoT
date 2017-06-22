@@ -7,3 +7,6 @@
 [submodule "thirdparty/src/github.com/muka/go-bluetooth"]
 	path = thirdparty/src/github.com/muka/go-bluetooth
 	url = https://github.com/muka/go-bluetooth
+[submodule "thirdparty/src/github.com/gorilla/websocket"]
+	path = thirdparty/src/github.com/gorilla/websocket
+	url = https://github.com/gorilla/websocket
