@@ -1,3 +1,17 @@
+/*************************************************************************
+ *
+ * $file: check_connectivity.js
+ *
+ * @brief: Handles event machine for cloud/net connect events
+ *
+ * @author: Srinibas Maharana
+ *
+ * @date: 10 June 2017 First cut
+ *
+ * This file is subject to the terms and conditions defined in
+ * file 'LICENSE.txt', which is part of this source code package.
+ *
+ ************************************************************************/
 /* include modules  */
 var fs           = require('fs');
 var rl           = require('readline');

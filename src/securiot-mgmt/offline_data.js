@@ -3,6 +3,8 @@
  * $file: offline_data.js
  *
  * @brief: offline data hander
+ *
+ * @author: Srinibas Maharana
  *
  * @date: 09 June 2017 First version of offline data
  *
