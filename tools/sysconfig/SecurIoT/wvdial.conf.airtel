@@ -1,0 +1,16 @@
+
+[Dialer Defaults]
+Init1 = ATZ
+Init2 = ATQ0 V1 E1 S0=0 &C1 &D2 +FCLASS=0
+Init3 = AT+CGDCONT=1,"IP","airtelgprs.com"
+Password = airtel
+Phone = *99#
+Modem Type = Analog Modem
+stupid mode = 1
+Baud = 9600
+New PPPD = yes
+Modem = /dev/ttyUSB2
+ISDN = 0
+Username = airtel
+Carrier Check = no
+FlowControl = Hardware(CRTSCTS)
