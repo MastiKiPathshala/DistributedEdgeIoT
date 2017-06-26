@@ -329,7 +329,7 @@ var appUpdateSystemStatus = function(callback)
             systemStatus.manufacturer = "SecurIoT.in";
             systemStatus.sensorsAttached = 2;
 
-            redisClient.hmset ("SystemStatus",'SOFTWARE_VERSION_TAG', softwareVersion, 'FIRMWARE_VERSION_TAG', firmwareVersion, 'KERNEL_VERSION_TAG', kernelVersion, MANUFACTURER_TAG, "SecurIoT.in", function(err, reply) {
+            redisClient.hmset ("SystemStatus", SOFTWARE_VERSION_TAG, softwareVersion, FIRMWARE_VERSION_TAG, firmwareVersion, KERNEL_VERSION_TAG, kernelVersion, MANUFACTURER_TAG, "SecurIoT.in", function(err, reply) {
 
                if (err) {
                   log.debug('kernel version set failed');

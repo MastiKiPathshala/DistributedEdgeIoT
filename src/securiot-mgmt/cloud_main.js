@@ -75,7 +75,7 @@ var azureConnectCallback = function (err)
       cloudClient.on('message', azureC2D.onC2DMessage);
       //client.receive (function (err, res, msg) {
       cloudClient.getTwin(azureDT.onConfigChange);
-      cloudClient.onDeviceMethod('softwareUpGrade', azureDM.onSoftwareUpgrade);
+      cloudClient.onDeviceMethod('softwareUpgrade', azureDM.onSoftwareUpgrade);
       cloudClient.onDeviceMethod('reboot', azureDM.onReboot);
       cloudClient.onDeviceMethod('configReset', azureDM.onConfigReset);
       cloudClient.onDeviceMethod('remoteDiagnostics', azureDM.onRemoteDiagnostics);
