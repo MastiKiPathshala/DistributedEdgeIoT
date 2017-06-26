@@ -135,7 +135,7 @@ func SubscribeMqtt () {
             os.Exit(1)
 
          }
-         procData();
+         procSensorData();
 
          wg.Add (3)
 
@@ -144,15 +144,20 @@ func SubscribeMqtt () {
 }
 
 var ReadMessage MQTT.MessageHandler = func (client MQTT.Client, msg MQTT.Message) {
+
    fmt.Println ( msg.Topic(),string(msg.Payload()) )
+   // push this data element to an array, based on data type
 }
 
-func procData(){
+func procSensorData() {
 
-   log.Debug(time.Millisecond ,  time.Second, time.Minute , "Schedule R Script run")
-   //time.AfterFunc(1000*time.Millisecond, procData)
-   time.AfterFunc(10 * time.Minute, procData)
+   log.Debug("Schedule R Script run") // every 10 minutes for now
 
+   time.AfterFunc(10 * time.Minute, procSensorData)
+
+   // call R Script to pick up the Data array
+   // flush the data array
+   // push the meta data over to local mqtt broker
 }
 
 var wg sync.WaitGroup
