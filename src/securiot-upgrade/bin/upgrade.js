@@ -47,7 +47,7 @@ var CLEANUP_SCRIPT  = WORKING_DIR + SVC_MODULE + '/routes/cleanup.js'
 var INSTALL_SCRIPT  = WORKING_DIR + SVC_MODULE + '/routes/install.js'
 var RESTART_SCRIPT  = WORKING_DIR + SVC_MODULE + '/routes/restart.js'
 var ROLLBACK_SCRIPT = WORKING_DIR + SVC_MODULE + '/routes/rollback.js'
-var UPGRADE_SCRIPT  = WORKING_DIR + SVC_MODULE + 'routes/upgrade.js'
+var UPGRADE_SCRIPT  = WORKING_DIR + SVC_MODULE + '/routes/upgrade.js'
 
 
 log = require('loglevel');
