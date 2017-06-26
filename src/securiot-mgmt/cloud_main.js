@@ -179,7 +179,7 @@ var awsErrorCallback = function (err)
 
 var mqttLocalClientInit = function(callback)
 {
-   log.debug('MQTT local broker init');
+   log.debug('MQTT local client init');
    exec('cat /sys/class/net/eth0/address',
 
       function (error, stdout, stderr) {
@@ -200,15 +200,18 @@ var mqttLocalClientInit = function(callback)
 
       forwardingRule = parsedConfigData.gatewaySaurabhpi.forwarding_rules;
       localClient    = mqtt.connect('mqtt://localhost')
+
       localClient.on('connect', function () {
 
          log.debug('Local MQTT Client connected, setting up subscriptions');
+
          localClient.subscribe('no2-data');
          localClient.subscribe('so2-data');
          localClient.subscribe('gps-data');
          localClient.subscribe('temp-data');
          localClient.subscribe('humid-data');
-	  })
+	   })
+
       localClient.on('message', function (topic, data) {
 
          log.trace("data from securiot-gpio daemon: "+data.toString());
@@ -377,6 +380,7 @@ var mqttGatewayRelayInit = function(callback)
 
    if (typeof localClient != "undefined") {
 
+      log.debug(' setting up the subscriptions for Local MQTT Client');
       localClient.on('connect', function () {
 
          log.debug('Local MQTT Client connected, setting up subscriptions');

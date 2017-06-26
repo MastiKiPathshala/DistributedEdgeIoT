@@ -48,6 +48,8 @@ var topic *string
 
 func main () {
 
+   fmt.Println("service start")
+
    backend1 := logging.NewLogBackend(os.Stderr, "", 0)
    backend2 := logging.NewLogBackend(os.Stderr, "", 0)
 
@@ -63,6 +65,8 @@ func main () {
 }
 
 func SubscribeMqtt () {
+
+   fmt.Println("MQTT Client Connect")
 
    topic  := flag.String("topic", "gps-data", "The topic name to/from which to publish/subscribe")
    broker := flag.String("broker", "tcp://localhost:1883", "The broker URI. ex: tcp://10.10.1.1:1883")
@@ -112,6 +116,8 @@ func SubscribeMqtt () {
    } else {
 
       if *action == "sub" {
+
+         fmt.Println("Subscriber Started")
 
          opts.SetDefaultPublishHandler(ReadMessage)
          
