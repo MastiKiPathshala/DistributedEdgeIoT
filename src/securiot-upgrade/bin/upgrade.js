@@ -44,10 +44,10 @@ SECUREIOT_DEFAULT_HARDWARE_VERSION = "RPi3";
 SECUREIOT_DEFAULT_HARDWARE_DESCRIPTION = "Raspberry Pi 3 Model B";
 
 var CLEANUP_SCRIPT  = WORKING_DIR + SVC_MODULE + '/routes/cleanup.js'
+var GET_PKG_SCRIPT  = WORKING_DIR + SVC_MODULE + '/routes/getpkg.js'
 var INSTALL_SCRIPT  = WORKING_DIR + SVC_MODULE + '/routes/install.js'
 var RESTART_SCRIPT  = WORKING_DIR + SVC_MODULE + '/routes/restart.js'
 var ROLLBACK_SCRIPT = WORKING_DIR + SVC_MODULE + '/routes/rollback.js'
-var UPGRADE_SCRIPT  = WORKING_DIR + SVC_MODULE + '/routes/upgrade.js'
 
 
 log = require('loglevel');
@@ -276,7 +276,7 @@ var getPkg = function()
 
    publishMessage('fetching package');
 
-   execScript(UPGRADE_SCRIPT, getPkgErr, getPkgDone);
+   execScript(GET_PKG_SCRIPT, getPkgErr, getPkgDone);
 }
 
 /* install package functional block */
