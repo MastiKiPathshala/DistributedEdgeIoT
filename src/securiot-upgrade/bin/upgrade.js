@@ -389,7 +389,7 @@ var startUpgrade = function()
 
 var fetchHwVersionInfo = function()
 {
-   redisClient.hget("systemInfo",'sysHwVersion',
+   redisClient.hget("SystemStatus",'hardwareVersion',
 
       function(err, reply) {
 
@@ -411,7 +411,7 @@ var fetchHwVersionInfo = function()
 // fetch next version
 var fetchUpgradeVersionInfo = function()
 {
-   redisClient.get('systemSwUpgradeVersion',
+   redisClient.get('sysSwUpgradeVersion',
 
       function(err, reply) {
 
@@ -432,7 +432,7 @@ var fetchUpgradeVersionInfo = function()
 // fetch current version
 var fetchActiveVersionInfo = function()
 {
-   redisClient.hget("SystemDetails",'sysSwVersion',
+   redisClient.hget("SystemStatus",'softwareVersion',
 
       function(err, reply) {
 

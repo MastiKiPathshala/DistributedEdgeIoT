@@ -7,7 +7,7 @@ var express    = require('express');
 
 var upgrade = express.Router();
 
-UPGRADE_SVC      = BASE_MODULE + '-upgrade';
+UPGRADE_SVC      = 'securiot-upgrade';
 UPGRADE_SVC_PID  = UPGRADE_SVC + '-pid';
 UPGRADE_SVC_NAME = UPGRADE_SVC + '-service';
 
@@ -33,9 +33,14 @@ upgrade.get('/', function(req, res, next) {
 
 upgrade.post('/:nextVersion', function(req, res, next) {
 
+	var upgradeVersion = req.params.nextVersion;
+	softwareUpgrade (upgradeVersion, res);
+})
+
+var softwareUpgrade = function (upgradeVersion, res) {
    var state = false;
    var upgradePid;
-   var upgradeVersion = req.params.nextVersion;
+   //var upgradeVersion = req.params.nextVersion;
 
    log.debug('upgrade version ' + upgradeVersion);
  
@@ -51,9 +56,11 @@ upgrade.post('/:nextVersion', function(req, res, next) {
 
       var message = 'upgrade version is same as installed';
       log.debug(message);
-      io.emit('update',{action:'update',status:message});
-      res.json({success: state});
-      return;
+      //io.emit('update',{action:'update',status:message});
+		cloudConnect.updateRemoteCmdStatus ('softwareUpgrade', 'Failed', message, '');
+      //res.json({success: state});
+		cloudConnect.sendRemoteCmdResponse ('softwareUpgrade', res, {success: 'false',msg: message});
+		return;
    }
  
    if (upgradeState != 0) {
@@ -128,8 +135,8 @@ upgrade.post('/:nextVersion', function(req, res, next) {
       }
    });
  
-   res.json({success:state});
-})
+   //res.json({success:state});
+}
 
 // command functions
 
@@ -205,3 +212,4 @@ var upgradeSvcInstall = function()
 }
 
 module.exports = upgrade;
+module.exports.softwareUpgrade = softwareUpgrade;
