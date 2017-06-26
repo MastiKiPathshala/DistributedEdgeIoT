@@ -22,9 +22,9 @@ import (
     "io/ioutil"
     "encoding/json"
    "os/exec"
-   "sync"
-   "time"
 */
+   "time"
+   "sync"
    "flag"
    "os"
    MQTT "github.com/eclipse/paho.mqtt.golang"
@@ -61,6 +61,7 @@ func main () {
    logging.SetBackend(backend1Leveled, backend2Formatter)
 
    SubscribeMqtt ()
+   wg.Wait()
 
 }
 
@@ -120,20 +121,24 @@ func SubscribeMqtt () {
          fmt.Println("Subscriber Started")
 
          opts.SetDefaultPublishHandler(ReadMessage)
-         
+
          client := MQTT.NewClient(opts)
-         
+
          if token := client.Connect(); token.Wait() && token.Error() != nil {
-         
+
             panic(token.Error())
          }
-         
+
          if token := client.Subscribe(*topic, byte(*qos), nil); token.Wait() && token.Error() != nil {
-         
+
             fmt.Println(token.Error())
             os.Exit(1)
-         
+
          }
+         procData();
+
+         wg.Add (3)
+
       }
    }
 }
@@ -141,3 +146,13 @@ func SubscribeMqtt () {
 var ReadMessage MQTT.MessageHandler = func (client MQTT.Client, msg MQTT.Message) {
    fmt.Println ( msg.Topic(),string(msg.Payload()) )
 }
+
+func procData(){
+
+   log.Debug(time.Millisecond ,  time.Second, time.Minute , "Schedule R Script run")
+   //time.AfterFunc(1000*time.Millisecond, procData)
+   time.AfterFunc(10 * time.Minute, procData)
+
+}
+
+var wg sync.WaitGroup
