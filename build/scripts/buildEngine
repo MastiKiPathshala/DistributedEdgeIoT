@@ -150,6 +150,7 @@ sub buildSecurIoTGateway {
      system("mkdir -p $gitRoot/pkg");
      system("mkdir -p $gitRoot/thirdparty/bin");
      system("mkdir -p $gitRoot/thirdparty/pkg");
+     system("mkdir -p $gitRoot/build/pkg");
      print "Entering thirdparty Modules\n";
      chdir(qq($gitRoot/thirdparty));
      #system("make");
@@ -157,6 +158,8 @@ sub buildSecurIoTGateway {
      chdir(qq($gitRoot));
      print "Handling golang Modules\n";
      system("go install securiot-gpio");
+     system("go install securiot-ble");
+     system("go install securiot-services");
      print "Handling Node Modules\n";
      print "Changing directory to $gitRoot/build/scripts\n";
      chdir(qq($gitRoot/build/scripts));

@@ -4,7 +4,7 @@
 ../../pkg
 ../../src/node_modules
 ../../src/securiot-upgrade
-../../src/securiot-web
+../../src/securiot-mgmt
 ../../thirdparty/bin
 ../../thirdparty/pkg
 ../../tools
