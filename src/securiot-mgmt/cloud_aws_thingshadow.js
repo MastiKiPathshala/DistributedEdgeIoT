@@ -18,6 +18,16 @@ updateAttemptCount = 0;
 currentTimeout = null;
 clientTokenStack =[];
 
+exports.updateSensorStatus = function (sensorStatus) {
+	var myThingState = {
+		state: {
+			reported: {
+				SensorStatus: sensorStatus
+			}
+		}
+	}
+}
+
 exports.updateSystemStatus = function (systemStatus) {
 	updateAttemptCount++;
 

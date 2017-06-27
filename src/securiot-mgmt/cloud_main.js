@@ -112,7 +112,7 @@ var awsConnectCallback = function (err)
    } else {
 
       log.debug('AWS Cloud Client connected');
-      awsRemoteConfigTopic = awsBaseTopic+'/topic/remoteconfig';
+      awsRemoteConfigTopic = awsBaseTopic+'topic/remoteconfig';
       cloudClient.on ('update', awsTS.updateCallback);
       cloudClient.on('status', awsTS.statusCallback);
       cloudClient.on('message', awsDM.messageCallback);
@@ -135,7 +135,7 @@ var awsReconnectCallback = function (err)
 
       log.debug('AWS Cloud Client reconnected');
 
-      awsRemoteConfigTopic = awsBaseTopic+'/topic/remoteconfig';
+      awsRemoteConfigTopic = awsBaseTopic+'topic/remoteconfig';
       cloudClient.on ('update', awsTS.updateCallback);
       cloudClient.on('status', awsTS.statusCallback);
 
@@ -191,37 +191,37 @@ var mqttLocalClientInit = function(callback)
          var wlan       = stdout;
          var mac        = wlan.split("\n");
          uniqueGetwayId = mac[0].toString();
-   });
+});
 
-   if (fs.existsSync('/etc/securiot.in/config.txt')) {
+	if (fs.existsSync('/etc/securiot.in/config.txt')) {
 
-      localConfigData  = fs.readFileSync('/etc/securiot.in/config.txt');
-      parsedConfigData = JSON.parse(localConfigData);
+		localConfigData  = fs.readFileSync('/etc/securiot.in/config.txt');
+		parsedConfigData = JSON.parse(localConfigData);
 
-      forwardingRule = parsedConfigData.gatewaySaurabhpi.forwarding_rules;
-      localClient    = mqtt.connect('mqtt://localhost')
+		forwardingRule = parsedConfigData.gatewaySaurabhpi.forwarding_rules;
+		localClient    = mqtt.connect('mqtt://localhost')
 
-      localClient.on('connect', function () {
+		localClient.on('connect', function () {
 
-         log.debug('Local MQTT Client connected, setting up subscriptions');
+			log.debug('Local MQTT Client connected, setting up subscriptions');
+			localClient.subscribe('topic/sensor/data/#');
+			localClient.subscribe('topic/sensor/status');
+		})
 
-         localClient.subscribe('no2-data');
-         localClient.subscribe('so2-data');
-         localClient.subscribe('gps-data');
-         localClient.subscribe('temp-data');
-         localClient.subscribe('humid-data');
-	   })
+		localClient.on('message', function (topic, data) {
 
-      localClient.on('message', function (topic, data) {
+			log.trace("data from " + topic + " topic : " + data.toString());
 
-         log.trace("data from securiot-gpio daemon: "+data.toString());
+			var now = moment();
+			var currentTime   = now.tz("America/New_York").format('YYYY-MM-DDTHH:mm:ss.SSSZZ');
 
-         var now = moment();
-         var currentTime   = now.tz("America/New_York").format('YYYY-MM-DDTHH:mm:ss.SSSZZ');
+			switch (topic) {
+				case "topic/sensor/status":
+					// Report list of sensor types to properties/reported/SensorStatus
+					updateSensorStatus (data);
+					break;
 
-         switch (topic) {
-
-         case "gps-data":
+         case "topic/sensor/data/gps":
 
             gpsCount ++;
 
@@ -237,7 +237,7 @@ var mqttLocalClientInit = function(callback)
             mqttRelayDataSend (finalGpsData,forwardingRule);
             break;
 
-         case "temp-data":
+         case "topic/sensor/data/temperature":
 
             tempCount ++;
 
@@ -253,7 +253,7 @@ var mqttLocalClientInit = function(callback)
             mqttRelayDataSend (finalTempData,forwardingRule);
             break;
 
-         case "humid-data":
+         case "topic/sensor/data/humidity":
 
             humidCount ++;
 
@@ -269,7 +269,7 @@ var mqttLocalClientInit = function(callback)
             mqttRelayDataSend (finalHumidData,forwardingRule);
             break;
 
-         case "no2-data":
+         case "topic/sensor/data/no2":
 
             no2Count ++;
 
@@ -285,7 +285,7 @@ var mqttLocalClientInit = function(callback)
             mqttRelayDataSend (finalNo2Data,forwardingRule);
              break;
 
-         case "so2-data":
+         case "topic/sensor/data/so2":
 
             so2Count ++
 
@@ -300,11 +300,12 @@ var mqttLocalClientInit = function(callback)
 
             mqttRelayDataSend (finalSo2Data,forwardingRule);
             break;
-         }
-      });
-     // });
-   }
-   if (callback) { callback(); }
+			}
+		});
+	}
+	if (callback) {
+		callback();
+	}
 }
 
 var mqttCloudClientInit = function (callback)
@@ -655,6 +656,18 @@ var writeOneTuple = function (file, sensorData)
     exec (cmd, function () {
        log.trace ("Message stored offline");
     });
+}
+
+var updateSensorStatus = function (sensorStatus)
+{
+   switch (cloudServerType) {
+      case "azure":
+         azureDT.updateSensorStatus (sensorStatus);
+         break;
+      case "AWS":
+         awsTS.updateSensorStatus (sensorStatus);
+         break;
+   }
 }
 
 var updateSystemStatus = function (systemStatus)

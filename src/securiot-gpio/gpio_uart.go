@@ -68,33 +68,33 @@ func TakeGpsData () {
 	
 		gpsData := latStr+"-"+lonStr+"-"+sensorDataType
 	
-		if token := client.Publish("gps-data", 0, false, gpsData); token.Error() != nil {
+		if token := client.Publish("topic/sensor/data/gps", 0, false, gpsData); token.Error() != nil {
 		    
 			fmt.Println(token.Error())
 		}
 	
 		temperatureData := latStr+"-"+lonStr+"-"+"temperature"
 	
-		if token := client.Publish("temp-data", 0, false, temperatureData); token.Error() != nil {
+		if token := client.Publish("topic/sensor/data/temperature", 0, false, temperatureData); token.Error() != nil {
 		    
 			fmt.Println(token.Error())
 		}
 	
 		humidityData := latStr+"-"+lonStr+"-"+"humidity"
 	
-		if token := client.Publish("humid-data", 0, false, humidityData); token.Error() != nil {
+		if token := client.Publish("topic/sensor/data/humidity", 0, false, humidityData); token.Error() != nil {
 		    
 			fmt.Println(token.Error())
 		}
 		no2Data := latStr+"-"+lonStr+"-"+"no2"
 	
-		if token := client.Publish("no2-data", 0, false, no2Data); token.Error() != nil {
+		if token := client.Publish("topic/sensor/data/no2", 0, false, no2Data); token.Error() != nil {
 		    
 			fmt.Println(token.Error())
 		}
 		so2Data := latStr+"-"+lonStr+"-"+"so2"
 	
-		if token := client.Publish("so2-data", 0, false, so2Data); token.Error() != nil {
+		if token := client.Publish("topic/sensor/data/so2", 0, false, so2Data); token.Error() != nil {
 		    
 			fmt.Println(token.Error())
 		}

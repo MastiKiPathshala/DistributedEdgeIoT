@@ -52,6 +52,29 @@ var completeConfigChange =  function(twin) {
      });
 };
 
+exports.updateSensorStatus = function (sensorStatus) {
+
+	if (typeof cloudClient != "undefined") {
+
+		cloudClient.getTwin (function (err, twin) {
+			if (err) {
+				log.error ("Azure Client failed to get twin : " + err);
+			} else {
+				var patch = {
+					SensorStatus: sensorStatus
+				};
+				twin.properties.reported.update(patch, function(err) {
+					if (err) {
+						log.error('Sensor Status not updated : ' + err);
+					} else {
+						log.debug('Sensor Status updated: ' + JSON.stringify(patch));
+					}
+				});
+			}
+		});
+	}
+}
+
 exports.updateSystemStatus = function (systemStatus) {
 
 	if (typeof cloudClient != "undefined") {

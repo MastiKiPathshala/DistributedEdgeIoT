@@ -66,7 +66,7 @@ func SubscribeMqtt ( ) {
  
    //...........................start of mqtt initialization..................................
   
-    topic = flag.String("topic", "gps-data", "The topic name to/from which to publish/subscribe")
+    topic = flag.String("topic", "topic/sensor/config", "The topic name to/from which to publish/subscribe")
 	broker := flag.String("broker", "tcp://localhost:1883", "The broker URI. ex: tcp://10.10.1.1:1883")
 	
 	id := flag.String("id", "testgoid", "The ClientID (optional)")
@@ -237,6 +237,14 @@ func validateProtocolDataType (protocol, dataType string){
 	switch matchDataType {
 	    
 		case "gps":
+			sensorStatus := "[{\"sensorType\":\"gps\", \"SensorDetails\":{\"sensorId\":\"\"}}]"
+
+				fmt.Println(sensorStatus)
+			if token := client.Publish("topic/sensor/status", 0, false, sensorStatus); token.Error() != nil {
+
+				fmt.Println(token.Error())
+			}
+
 		    
 			out1, err1 := exec.Command( "bash", "-c", "sudo gpsd /dev/ttyS0 -F /var/run/gpsd.sock").Output()
             _,_ = out1,err1
