@@ -21,8 +21,8 @@ import (
 /*
     "io/ioutil"
     "encoding/json"
-   "os/exec"
 */
+   "os/exec"
    "time"
    "sync"
    "flag"
@@ -69,8 +69,8 @@ func SubscribeMqtt () {
 
    fmt.Println("MQTT Client Connect")
 
-   topic  := flag.String("topic", "gps-data", "The topic name to/from which to publish/subscribe")
-   broker := flag.String("broker", "tcp://localhost:1883", "The broker URI. ex: tcp://10.10.1.1:1883")
+   topic  := flag.String("topic", "topic/sensor/data/#", "The topic name to/from which to publish/subscribe")
+   broker := flag.String("broker", "tcp://localhost:1883", "The broker URI. ex: tcp://127.0.0.1:1883")
 
    id := flag.String("id", "testgoid", "The ClientID (optional)")
    cleansess := flag.Bool("clean", false, "Set Clean Session (default false)")
@@ -155,9 +155,13 @@ func procSensorData() {
 
    time.AfterFunc(10 * time.Minute, procSensorData)
 
-   // call R Script to pick up the Data array
-   // flush the data array
+   // copy the data array
+   // call R Script to pick up the data array
    // push the meta data over to local mqtt broker
+   // flush the data array
+   sd, err := exec.Command( "bash", "-c", "sudo Rscript sd.R").Output()
+   _,_ = sd, err
+   fmt.Println ( string(sd) )
 }
 
 var wg sync.WaitGroup
