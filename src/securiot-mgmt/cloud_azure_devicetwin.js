@@ -53,6 +53,8 @@ var completeConfigChange =  function(twin) {
 };
 
 exports.updateSensorStatus = function (sensorStatus) {
+		 
+	var status = JSON.parse(sensorStatus)
 
 	if (typeof cloudClient != "undefined") {
 
@@ -61,8 +63,10 @@ exports.updateSensorStatus = function (sensorStatus) {
 				log.error ("Azure Client failed to get twin : " + err);
 			} else {
 				var patch = {
-					SensorStatus: sensorStatus
+					SensorStatus: JSON.stringify(status)
+					
 				};
+				
 				twin.properties.reported.update(patch, function(err) {
 					if (err) {
 						log.error('Sensor Status not updated : ' + err);

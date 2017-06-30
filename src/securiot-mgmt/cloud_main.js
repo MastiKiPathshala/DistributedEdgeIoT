@@ -209,8 +209,10 @@ var mqttLocalClientInit = function(callback)
 		localClient.on('connect', function () {
 
 			log.debug('Local MQTT Client connected, setting up subscriptions');
+			
 			localClient.subscribe('topic/sensor/data/#');
 			localClient.subscribe('topic/sensor/status');
+			
 		})
 
 		localClient.on('message', function (topic, data) {
@@ -222,7 +224,10 @@ var mqttLocalClientInit = function(callback)
 
 			switch (topic) {
 				case "topic/sensor/status":
+					
 					// Report list of sensor types to properties/reported/SensorStatus
+					
+					log.debug(":::::::::::::::::::::::::::::::::::topic/sensor/status:::::::::::::::::::::::::::::");
 					updateSensorStatus (data);
 					break;
 
@@ -252,7 +257,7 @@ var mqttLocalClientInit = function(callback)
 					var splitGyroscope =gyroscope.split("-");
 					var gyroscopeData = splitGyroscope[0];
 					var finalScore = 8;
-					var finalGyroscopeData = JSON.stringify({sno :gyroscopeCount .toString(), gatewayId : gatewayUniqueId, 
+					var finalGyroscopeData = JSON.stringify({sno :gyroscopeCount .toString(), gatewayId : uniqueGetwayId, 
 						sensorId : "gyroscope-"+splitGyroscope[1], dataType :splitGyroscope[2],dataUnit:splitGyroscope[3],
 						gyroscope:gyroscopeData, time : currentTime,qualityScore :finalScore})
 
@@ -269,7 +274,7 @@ var mqttLocalClientInit = function(callback)
 					var splitAccelerometer = accelerometer.split("-");
 					var accelerometerData = splitAccelerometer[0];
 					var finalScore = 18;
-					var finalAccelerometerData = JSON.stringify({sno :gyroscopeCount .toString(), gatewayId : gatewayUniqueId, 
+					var finalAccelerometerData = JSON.stringify({sno :gyroscopeCount .toString(), gatewayId : uniqueGetwayId, 
 						sensorId : " accelerometer-"+splitAccelerometer[1], dataType :splitAccelerometer[2],dataUnit:splitAccelerometer[3],
 						accelerometer:accelerometerData, time : currentTime,qualityScore :finalScore})
 
@@ -286,7 +291,7 @@ var mqttLocalClientInit = function(callback)
 					var splitMagnetometer = magnetometer.split("-");
 					var  magnetometerData = splitMagnetometer[0];
 					var finalScore = 85;
-					var finalMagnetometerData = JSON.stringify({sno :gyroscopeCount .toString(), gatewayId : gatewayUniqueId, 
+					var finalMagnetometerData = JSON.stringify({sno :gyroscopeCount .toString(), gatewayId : uniqueGetwayId, 
 						sensorId : " magnetometer-"+splitMagnetometer[1], dataType :splitMagnetometer[2],dataUnit:splitMagnetometer[3],
 						magnetometer: magnetometerData, time : currentTime,qualityScore :finalScore})
 
@@ -303,7 +308,7 @@ var mqttLocalClientInit = function(callback)
 					var splitTemp = tempData.split("-");
 					var tempData = parseFloat(splitTemp[0]);
 					var finalScore = tempData + 12;
-					var finalTempData = JSON.stringify({sno : tempCount.toString(), gatewayId : gatewayUniqueId, 
+					var finalTempData = JSON.stringify({sno : tempCount.toString(), gatewayId : uniqueGetwayId, 
 						sensorId : "ambTemp-"+splitTemp[1], dataType : splitTemp[2], dataUnit: splitTemp[3],
 						temperature : tempData ,time : currentTime,qualityScore :finalScore})
 
@@ -320,7 +325,7 @@ var mqttLocalClientInit = function(callback)
 					var splitTemp = tempData.split("-");
 					var tempData = parseFloat(splitTemp[0]);
 					var finalScore = tempData + 10;
-					var finalTempData = JSON.stringify({sno : tempCount.toString(), gatewayId : gatewayUniqueId, 
+					var finalTempData = JSON.stringify({sno : tempCount.toString(), gatewayId : uniqueGetwayId, 
 						sensorId : "objTemp-"+ splitTemp[1], dataType : splitTemp[2],dataUnit: splitTemp[3],
 						temperature : tempData ,time : currentTime,qualityScore :finalScore})
 
@@ -337,7 +342,7 @@ var mqttLocalClientInit = function(callback)
 					var splitBarometricPressure = barometricPressure.split("-");
 					var barometricPressureData = parseFloat(splitBarometricPressure[0]);
 					var finalScore = barometricPressureData-8;
-					var finalPressureData = JSON.stringify({sno :pressureCount .toString(), gatewayId : gatewayUniqueId, 
+					var finalPressureData = JSON.stringify({sno :pressureCount .toString(), gatewayId : uniqueGetwayId, 
 						sensorId : "pressure-"+splitBarometricPressure[1], dataType :splitBarometricPressure[2],dataUnit:splitBarometricPressure[3],
 						pressure:barometricPressureData, time : currentTime,qualityScore :finalScore})
 
@@ -356,7 +361,7 @@ var mqttLocalClientInit = function(callback)
 					var splitHumid = humidData.split("-");
 					var humidData = parseFloat(splitHumid[0]);
 					var finalScore = humidData-18;
-					var finalHumidData = JSON.stringify({sno :humidCount.toString(), gatewayId : gatewayUniqueId, 
+					var finalHumidData = JSON.stringify({sno :humidCount.toString(), gatewayId : uniqueGetwayId, 
 						sensorId : "humid-"+ splitHumid[1], dataType : splitHumid[2],dataUnit: splitHumid[3],
 						humidity :humidData, time : currentTime,qualityScore :finalScore})
 
@@ -372,7 +377,7 @@ var mqttLocalClientInit = function(callback)
 					var splitLuxometer =luxometer.split("-");
 					var luxometerData = splitLuxometer[0];
 					var finalScore = 15;
-					var finalLuxometerDataData = JSON.stringify({sno :gyroscopeCount .toString(), gatewayId : gatewayUniqueId, 
+					var finalLuxometerDataData = JSON.stringify({sno :gyroscopeCount .toString(), gatewayId : uniqueGetwayId, 
 						sensorId : "luxometer-"+splitLuxometer[1], dataType :splitLuxometer[2],dataUnit:splitLuxometer[3],
 						luxometer: luxometerData, time : currentTime,qualityScore :finalScore})
 
@@ -768,7 +773,7 @@ var writeOneTuple = function (file, sensorData)
 }
 
 var updateSensorStatus = function (sensorStatus)
-{
+{	log.debug("cloudServerType: "+cloudServerType);
    switch (cloudServerType) {
       case "azure":
          azureDT.updateSensorStatus (sensorStatus);
@@ -817,7 +822,7 @@ var sendRemoteCmdResponse = function (response, status)
          break;
    }
 }
-
+module.exports.updateSensorStatus    = updateSensorStatus;
 module.exports.sendToCloud           = sendToCloud;
 module.exports.updateSystemStatus    = updateSystemStatus;
 module.exports.mqttCloudClientInit   = mqttCloudClientInit;

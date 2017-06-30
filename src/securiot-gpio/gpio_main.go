@@ -237,15 +237,36 @@ func validateProtocolDataType (protocol, dataType string){
 	switch matchDataType {
 	    
 		case "gps":
-			sensorStatus := "[{\"sensorType\":\"gps\", \"SensorDetails\":{\"sensorId\":\"\"}}]"
-
-				fmt.Println(sensorStatus)
+			//sensorStatus := [{sensorType:"humid", SensorDetails:{"sensorId":""}}]
+			
+			type details struct {
+				SensorId string
+			}
+			type sensor struct {
+				SensorType string
+				SensorDetails *[]details
+			}
+	
+			status := &[]sensor{
+				{
+					SensorType: "gps",
+					SensorDetails:  &[]details{{SensorId:"aaa"},{SensorId:"axz"},},
+				},
+				{
+					SensorType: "temp",
+					SensorDetails:  &[]details{{SensorId:"zzz"},},
+				},
+			}
+			sensorStatus,_ := json.Marshal(status)
+			fmt.Println(string(sensorStatus))
+	
+	
 			if token := client.Publish("topic/sensor/status", 0, false, sensorStatus); token.Error() != nil {
 
 				fmt.Println(token.Error())
 			}
 
-		    
+		 
 			out1, err1 := exec.Command( "bash", "-c", "sudo gpsd /dev/ttyS0 -F /var/run/gpsd.sock").Output()
             _,_ = out1,err1
 			

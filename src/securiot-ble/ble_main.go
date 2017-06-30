@@ -22,7 +22,7 @@ import (
 	"fmt"
 	MQTT "github.com/eclipse/paho.mqtt.golang"
 	//"reflect"
-	//"encoding/json"
+	"encoding/json"
 	"sync"
 	"time"
 )
@@ -38,6 +38,7 @@ func main(){
 	if error != nil {
 		panic(error)
 	}
+	
 	
 	SensorTag()
 	
@@ -77,6 +78,70 @@ func SensorTag() {
 	//log.Debug("devarr",devarr[0])
 	len := len( devarr )
 	log.Debug("length: ",len)
+
+	var sensorIdArray []string
+	for j := 0; j< len; j++ { 
+		properties,err := devarr[j].GetProperties()
+		
+			if err != nil {
+				log.Fatal(err)
+			}
+			sensorIdArray = append(sensorIdArray, properties.Address)
+			log.Debug("DeviceProperties -ADDRESS: ",sensorIdArray[j])
+	}
+	
+	type details struct {
+				SensorId []string
+			}
+			type sensor struct {
+				SensorType string
+				SensorDetails *details
+			}
+
+			status := &[]sensor{
+				{
+					SensorType: "ambientTemperature",
+					SensorDetails:&details{SensorId:sensorIdArray},
+				},
+				{
+					SensorType: "humidity",
+					SensorDetails:&details{SensorId:sensorIdArray},
+				},
+				
+				{
+					SensorType: "accelerometer",
+					SensorDetails:&details{SensorId:sensorIdArray},
+				},
+				{
+					SensorType: "magnetometer",
+					SensorDetails:&details{SensorId:sensorIdArray},
+				},
+				{
+					SensorType: "gyroscope",
+					SensorDetails:&details{SensorId:sensorIdArray},
+				},/*
+				{
+					SensorType: "objectTemperature",
+					SensorDetails:&details{SensorId:sensorIdArray},
+				},
+				{
+					SensorType: "luxometer",
+					SensorDetails:&details{SensorId:sensorIdArray},
+				},
+				{
+					SensorType: "pressure",
+					SensorDetails:&details{SensorId:sensorIdArray},
+				},*/
+				
+			}
+			sensorStatus,_ := json.Marshal(status)
+			fmt.Println(string(sensorStatus))
+			
+	
+			if token := client.Publish("topic/sensor/status", 0, false, sensorStatus); token.Error() != nil {
+
+				fmt.Println(token.Error())
+			}
 	//.....................get device properties.........(name,status-connected,paired,uuids,Address)..........
 	
 	for i := 0; i< len; i++ { 
@@ -86,6 +151,7 @@ func SensorTag() {
 				log.Fatal(err)
 			}
 		log.Debug("DeviceProperties -ADDRESS: ",prop1.Address)
+	
 		ConnectAndDisconnect(prop1.Address)
 	}
 	wg.Wait()
