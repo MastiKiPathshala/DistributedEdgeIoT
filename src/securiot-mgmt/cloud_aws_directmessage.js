@@ -14,7 +14,9 @@
  ************************************************************************/
 
 var exec = require('child_process').exec;
-var system = require ('./routes/system');
+var System = require ('./routes/system');
+var Diagnostics = require ('./routes/diagnostics');
+var Upgrade = require ('./routes/upgrade');
 
 var messageCallback = function(topic, payload)
 {
@@ -24,15 +26,26 @@ var messageCallback = function(topic, payload)
  		log.debug ("RemoteConfig - Method: " + remoteConfigCmd.method + ", Payload: " + JSON.stringify (remoteConfigCmd.payload));
 		switch (remoteConfigCmd.method) {
 			case "softwareUpgrade":
+				// Get the software version to be upgraded
+				var upgradeVersion = remoteConfigCmd.payload.fwPackageUri;
+
+				updateRemoteCmdStatus ('softwareUpgrade', 'Started', 'Invoking software upgrade....', 'AWS IoT requested softwareUpgrade');
+				Upgrade.softwareUpgrade (upgradeVersion, response);
 			break;
 			case "reboot":
 				updateRemoteCmdStatus ('reboot', 'Started', 'Invoking device reboot ....', 'AWS IoT triggered reboot');
-				system.restartSystem ();
+				System.restartSystem ();
 				updateRemoteCmdStatus ('reboot', 'In-Progress', 'Device rebooting ....', 'AWS IoT triggered reboot');
 			break;
 			case "configReset":
+				// Get the config Reset flag
+				var configResteFlag = remoteConfigCmd.payload.cloudConfigReset;
+				updateRemoteCmdStatus ('configReset', 'Started', 'Resetting config to factory-default....', 'AWS IoT triggered configReset');
+				System.resetConfig (configResteFlag);
 			break;
 			case "remoteDiagnostics":
+				updateRemoteCmdStatus ('remoteDiagnostics', 'Started', 'Received diagnostics bundle request', 'AWS IoT triggered remoteDiagnostics');
+				Diagnostics.sendRemoteDiagnostics (response);
 			break;
 		}
 	}

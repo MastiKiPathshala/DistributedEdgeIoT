@@ -212,7 +212,7 @@ var mqttLocalClientInit = function(callback)
 			
 			localClient.subscribe('topic/sensor/data/#');
 			localClient.subscribe('topic/sensor/status');
-			
+			localClient.subscribe('topic/system/config/softwareUpgrade/update');
 		})
 
 		localClient.on('message', function (topic, data) {
@@ -223,11 +223,17 @@ var mqttLocalClientInit = function(callback)
 			var currentTime   = now.tz("America/New_York").format('YYYY-MM-DDTHH:mm:ss.SSSZZ');
 
 			switch (topic) {
+
+				case "topic/system/config/softwareUpgrade/update":
+
+					// Receive update message from securiot-upgrade process
+					updateRemoteCmdStatus ('softwareUpgrade', data.status, data.msg, '');
+					break;
+
 				case "topic/sensor/status":
 					
 					// Report list of sensor types to properties/reported/SensorStatus
 					
-					log.debug(":::::::::::::::::::::::::::::::::::topic/sensor/status:::::::::::::::::::::::::::::");
 					updateSensorStatus (data);
 					break;
 

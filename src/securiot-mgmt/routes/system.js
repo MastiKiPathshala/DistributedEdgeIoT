@@ -387,19 +387,6 @@ function scanNetworks(iface, cb) {
     }.bind({ iface: iface, cb: cb }));
 }
 
-var restartSystem = function() {
-   log.info(' system restart');
-
-   exec('sudo reboot', function(err, stdout, stderr) {
-      if (err) {
-          log.warn(err + stderr);
-      } else {
-          log.debug(stdout);
-      }
-   });
-}
-
-
 var getInterfaces = function(callback)
 {
    ifconfig.status(function(err, status) {
@@ -434,5 +421,37 @@ var getInterfaces = function(callback)
     })
 }
 
+var restartSystem = function() {
+
+	log.info(' system restart');
+	exec('sudo reboot', function(err, stdout, stderr) {
+		if (err) {
+			log.warn(err + stderr);
+		} else {
+			log.debug(stdout);
+		}
+	});
+}
+
+var resetConfig = function(configResetFlag, response) {
+    var cmd = "sudo cp /etc/securiot.in/config.default " +
+        "/etc/securiot.in/config.txt";
+    exec(cmd, function(err, stdout, stdout) {
+	if (configRestFlag === null) {
+		// Flag is NULL, retain cloud configuration
+		log.debug ("Flag is NULL, retain cloud configuration");
+	} else {
+		var cmd = "sudo cp /etc/securiot.in/config.default " + "/etc/securiot.in/config.txt";
+		exec(cmd, function(err, stdout, stdout) {
+
+				updateRemoteCmdStatus ('configReset', 'Completed', 'Config reset to factory default', '');
+				sendRemoteCmdResponse ('configReset', response, {success: 'true', msg: 'Config reset to factory default'});
+				restartSystem ();
+			});
+		}
+	});
+}
+
 module.exports = system;
 module.exports.restartSystem = restartSystem;
+module.exports.resetConfig = resetConfig;

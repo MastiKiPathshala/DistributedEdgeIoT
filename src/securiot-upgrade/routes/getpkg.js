@@ -35,7 +35,7 @@ CURR_BKUP_DIR = BKUP_DIR;
 const tmp_sign   = '/tmp/sign.sha256';
 const public_key = '/etc/ssl/certs/' + BASE_MODULE  + '-Geteway' + 'Public.pem';
 
-BASE_URL = 'build.' + BASE_MODULE + '.in/' + BASE_MODULE + '-geteway/';
+BASE_URL = 'build.' + BASE_MODULE + '.in/' + BASE_MODULE + '-gateway/';
 
 SYS_DELAY = 5000;
 EXIT_TIMEOUT = 10000;
@@ -72,6 +72,7 @@ redisClient = redis.createClient();
 redisClient.on("connect", function() {
 
    log.debug('Redis Connected');
+   console.log('Redis Connected');
 
    // pass on current version and next version
    setTimeout(function() {
@@ -587,7 +588,7 @@ function bkupDirRemove()
 
 var svcPkgValidate = function()
 {
-   var file_name = 'v' + upgradeVersion + '.tar.gz';
+   var file_name = upgradeVersion + '.tar.gz';
 
    publishMessage('validating package');
 
@@ -599,7 +600,7 @@ var svcPkgValidate = function()
 
 var svcPkgDigestGet = function()
 {
-   var digest = 'v' + upgradeVersion + '.tar.gz.digest';
+   var digest = upgradeVersion + '.tar.gz.digest';
 
    publishMessage('preparing package signature');
 
@@ -627,7 +628,8 @@ var svcPkgDownload = function()
    log.debug('downloading :' + fileUrl);
 
    // get the file from the build server
-   wgetCmd(fileUrl, BKUP_DIR, procFail, svcPkgUncompress);
+   //wgetCmd(fileUrl, BKUP_DIR, procFail, svcPkgUncompress);
+   wgetCmd(fileUrl, BKUP_DIR, procFail, procOk);
 }
 
 var bkupDirCleanAndCreate = function()
@@ -657,15 +659,16 @@ var svcPkgDownloadStart = function()
       return;
    }
 
-   fileName = 'v' + upgradeVersion + '.tar.gz.signed';
-   fileUrl  = BASE_URL + hwVersion + '/v' + upgradeVersion + '/' + fileName;
+   //fileName = upgradeVersion + '.tar.gz.signed';
+   fileName = upgradeVersion + '.tar.gz';
+   fileUrl  = BASE_URL + hwVersion + '/' + upgradeVersion + '/' + fileName;
    filePath = BKUP_DIR + fileName;
 
    log.debug('current_version:' + activeVersionn + ' upgradeVersion: ' +
        upgradeVersion + ' hwVersion:' + hwVersion);
 
    // bkup current working version, here
-   CURR_BKUP_DIR = BKUP_DIR + 'v' + activeVersionn;
+   CURR_BKUP_DIR = BKUP_DIR + activeVersionn;
 
    log.debug('Upgrade to ' + fileName);
    log.debug('BACKUP DIRECTORY:' + CURR_BKUP_DIR);

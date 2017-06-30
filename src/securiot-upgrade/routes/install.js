@@ -684,7 +684,7 @@ var webSvcStop = function()
    publishMessage('gateway installation complete');
 
    // now the tricky work, move the new version to working
-   serviceCmd(MGMT_SVC_NAME, 'stop', workingDirMove, workingDirMove);
+   serviceCmd(MGMT_SVC, 'stop', workingDirMove, workingDirMove);
 }
 
 var webSvcPkgDelete = function()
@@ -1006,14 +1006,14 @@ var pkgInstall = function()
       updateState = 'installPkg';
 
       // get the package file name, proper
-      fileName = 'v' + upgradeVersion + '.tar.gz';
+      fileName = upgradeVersion + '.tar.gz';
       filePath = BKUP_DIR + fileName;
 
       // bkup working version, here
-      CURR_BKUP_DIR = BKUP_DIR + 'v' + activeVersion;
+      CURR_BKUP_DIR = BKUP_DIR + activeVersion;
 
       // the new working dir
-      NEW_WORKING_DIR = BKUP_DIR + 'v'+ upgradeVersion;
+      NEW_WORKING_DIR = BKUP_DIR + upgradeVersion;
 
       log.debug('installing ' + upgradeVersion + ': ' + fileName + ' in ' + hwVersion);
 

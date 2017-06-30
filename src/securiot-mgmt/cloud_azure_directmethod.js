@@ -205,13 +205,12 @@ exports.onReboot = function(request, response)
 exports.onConfigReset = function (request, response)
 {
 	log.debug ("ID: " + request.requestId + ", Method: " + request.methodName + ", Payload: " + JSON.stringify(request.payload));
-	response.send(200, 'Factory Reset started', function(err) {
-		if (!err) {
-			log.error('An error occured when sending a method response:\n' + err.toString());
-		} else {
-			log.debug('Response to method \'' + request.methodName + '\' sent successfully.');
-		}
-	});
+
+	// Get the config Reset flag
+	var configResteFlag = request.payload.cloudConfigReset;
+
+	updateRemoteCmdStatus ('configReset', 'Started', 'Resetting config to factory-default....', 'IoTHub triggered configReset');
+	System.resetConfig (configResteFlag, response);
 }
 
 exports.onRemoteDiagnostics = function (request, response)
