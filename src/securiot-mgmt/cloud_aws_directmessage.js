@@ -35,17 +35,21 @@ var messageCallback = function(topic, payload)
 			case "reboot":
 				updateRemoteCmdStatus ('reboot', 'Started', 'Invoking device reboot ....', 'AWS IoT triggered reboot');
 				System.restartSystem ();
-				updateRemoteCmdStatus ('reboot', 'In-Progress', 'Device rebooting ....', 'AWS IoT triggered reboot');
+				updateRemoteCmdStatus ('reboot', 'In-Progress', 'Device rebooting ....', '');
 			break;
 			case "configReset":
-				// Get the config Reset flag
-				var configResteFlag = remoteConfigCmd.payload.cloudConfigReset;
 				updateRemoteCmdStatus ('configReset', 'Started', 'Resetting config to factory-default....', 'AWS IoT triggered configReset');
-				System.resetConfig (configResteFlag);
-			break;
+				// Get the config Reset flag
+				if (remoteConfigCmd.payload == null) {
+					System.resetConfig (null, null);
+				} else {
+					var configResteFlag = remoteConfigCmd.payload.cloudConfigReset;
+					System.resetConfig (configResteFlag, null);
+				}
+				break;
 			case "remoteDiagnostics":
 				updateRemoteCmdStatus ('remoteDiagnostics', 'Started', 'Received diagnostics bundle request', 'AWS IoT triggered remoteDiagnostics');
-				Diagnostics.sendRemoteDiagnostics (response);
+				Diagnostics.sendRemoteDiagnostics (null);
 			break;
 		}
 	}
@@ -55,13 +59,16 @@ var updateRemoteCmdStatus = function (cmd, status, msg, source)
 {
 	var date = new Date();
 	var myThingState = {};
-	myThingState['state']['reported']['SystemStatus'][cmd] = {
-				cmdStatus: status,
-                cmdMsg: msg,
+	myThingState.state = {};
+	myThingState.state.reported = {};
+	myThingState.state.reported.RemoteCommand = {};
+	myThingState.state.reported.RemoteCommand[cmd] = {
+		cmdStatus: status,
+		cmdMsg: msg,
 	}
 	if (status == 'Started') {
-		myThingState.state.reported.SystemStatus[cmd]['lastCmd'] = date.toISOString();
-		myThingState.state.reported.SystemStatus[cmd]['cmdSource'] = source;
+		myThingState.state.reported.RemoteCommand[cmd]['lastCmd'] = date.toISOString();
+		myThingState.state.reported.RemoteCommand[cmd]['cmdSource'] = source;
 	}
 	
 	cloudClientToken = cloudClient.update (deviceId, myThingState);
@@ -69,8 +76,8 @@ var updateRemoteCmdStatus = function (cmd, status, msg, source)
 	if (cloudClientToken === null) {
 		log.debug ("Failed to update System status, AttemptCount: " + updateAttemptCount);
 		currentTimeout = setTimeout (function () {
-			exports.updateSystemStatus (systemStatus);
-		}, 10000);
+			exports.updateRemoteCmdStatus (cmd, status, msg, source);
+		}, 5000);
 	} else {
 		clientTokenStack.push (cloudClientToken);
 	}
@@ -80,24 +87,24 @@ var updateRebootStatus = function (reasonStr)
 {
 	var date = new Date();
 	var myThingState = {
-	state: {
-        reported: {
-			SystemStatus : {
-				reboot: {
-					lastReboot: date.toISOString(),
-					rebootReason: reasonStr
+		state: {
+			reported: {
+				SystemStatus : {
+					reboot: {
+						lastReboot: date.toISOString(),
+						rebootReason: reasonStr
+					}
 				}
 			}
 		}
-	}
 	};
 	cloudClientToken = cloudClient.update (deviceId, myThingState);
 
 	if (cloudClientToken === null) {
 		log.debug ("Failed to update System status, AttemptCount: " + updateAttemptCount);
 		currentTimeout = setTimeout (function () {
-			exports.updateSystemStatus (systemStatus);
-		}, 10000);
+			exports.updateRebootStatus (reasonStr);
+		}, 5000);
 	} else {
 		clientTokenStack.push (cloudClientToken);
 	}

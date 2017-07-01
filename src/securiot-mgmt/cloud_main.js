@@ -117,7 +117,7 @@ var awsConnectCallback = function (err)
    } else {
 
       log.debug('AWS Cloud Client connected');
-      awsRemoteConfigTopic = awsBaseTopic+'topic/remoteconfig';
+      awsRemoteConfigTopic = awsBaseTopic+'/topic/remoteconfig';
       cloudClient.on ('update', awsTS.updateCallback);
       cloudClient.on('status', awsTS.statusCallback);
       cloudClient.on('message', awsDM.messageCallback);
@@ -616,8 +616,6 @@ var mqttRelayDataSend = function (finalData,forwardingRule)
 {
    log.trace("data from local broker: "+finalData);
 
-   var dataForForwarding = new Message(finalData);
-
    for (var rule in forwardingRule) {
 	
       switch (forwardingRule[rule].match.data_type) {
@@ -632,7 +630,7 @@ var mqttRelayDataSend = function (finalData,forwardingRule)
 
          case "analytics":
 
-            sendToAnaltics(dataForForwarding);
+            //sendToAnaltics(dataForForwarding);
             return;
 
          case "daisy-chained":
@@ -824,7 +822,7 @@ var sendRemoteCmdResponse = function (response, status)
          azureDM.sendRemoteCmdResponse (response, status);
          break;
       case "AWS":
-         awsDM.sendRemoteCmdResponse (response, status);
+         //awsDM.sendRemoteCmdResponse (response, status);
          break;
    }
 }
