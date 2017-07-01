@@ -219,35 +219,33 @@ function execScript (script_name, cb_error, cb_next, callback)
    child.on('exit', function (code, signal)
           { if (code) {ret_code = code;} });
 
-   child.on('close', function (code) {
+	child.on('close', function (code) {
 
-      if (code) {ret_code = code;}
+		if (code) {ret_code = code;}
 
-      if (ret_code) {
+		if (ret_code) {
 
-         log.debug ('Err:(' + ret_code + ') ' + script_name +
-                  ' ' + activeVersion + ' ' +  upgradeVersion + ' ' + hwVersion);
+			log.debug ('Err:(' + ret_code + ') ' + script_name + ' ' + activeVersion + ' ' +  upgradeVersion + ' ' + hwVersion);
+			if (callback) {
+				setTimeout(function () {
+					cb_error (callback);
+				},  SYSTEM_DELAY);
+			} else {
+				setTimeout(cb_error, SYSTEM_DELAY);
+			}
+		} else {
 
-         if (callback) {
-            setTimeout(cb_error(callback), SYSTEM_DELAY);
-         } else {
-            setTimeout(cb_error(), SYSTEM_DELAY);
-         }
+			log.debug ('End: ' + script_name + ' ' + activeVersion + ' ' +  upgradeVersion + ' ' + hwVersion);
+			if (callback) {
+				setTimeout(function () {
+					cb_next (callback);
+				},  SYSTEM_DELAY);
+			} else {
 
-      } else {
-
-         log.debug ('End: ' + script_name + ' ' + activeVersion +
-                  ' ' +  upgradeVersion + ' ' + hwVersion);
-
-         if (callback) {
-
-            setTimeout(cb_next(callback), SYSTEM_DELAY);
-         } else {
-
-            setTimeout(cb_next(), SYSTEM_DELAY);
-         }
-      }
-   });
+				setTimeout(cb_next, SYSTEM_DELAY);
+			}
+		}
+	});
 }
 
 /* get package functional block */
@@ -258,25 +256,20 @@ var getPkgDone = function(err_code)
 
    publishMessage('get package complete');
 
-   setTimeout(startInstall(), SYSTEM_DELAY);
+   setTimeout(startInstall, SYSTEM_DELAY);
 }
 
 var getPkgErr = function(err_code)
 {
-   log.debug('get package fail!');
-
-   publishMessage('get package failed');
-
-   setTimeout(publishMessage('failed'), SYSTEM_DELAY);
+	log.debug('get package fail!');
+	publishMessage('get package failed');
 }
 
 var getPkg = function()
 {
-   log.debug('Invoking get package script ' + activeVersion + '::' + upgradeVersion);
-
-   publishMessage('fetching package');
-
-   execScript(GET_PKG_SCRIPT, getPkgErr, getPkgDone);
+	log.debug('Invoking get package script ' + activeVersion + '::' + upgradeVersion);
+	publishMessage('fetching package');
+	execScript(GET_PKG_SCRIPT, getPkgErr, getPkgDone);
 }
 
 /* install package functional block */

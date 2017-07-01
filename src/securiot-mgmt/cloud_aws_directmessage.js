@@ -30,7 +30,7 @@ var messageCallback = function(topic, payload)
 				var upgradeVersion = remoteConfigCmd.payload.fwPackageUri;
 
 				updateRemoteCmdStatus ('softwareUpgrade', 'Started', 'Invoking software upgrade....', 'AWS IoT requested softwareUpgrade');
-				Upgrade.softwareUpgrade (upgradeVersion, response);
+				Upgrade.softwareUpgrade (upgradeVersion, null);
 			break;
 			case "reboot":
 				updateRemoteCmdStatus ('reboot', 'Started', 'Invoking device reboot ....', 'AWS IoT triggered reboot');
