@@ -143,6 +143,7 @@ var awsReconnectCallback = function (err)
       awsRemoteConfigTopic = awsBaseTopic+'topic/remoteconfig';
       cloudClient.on ('update', awsTS.updateCallback);
       cloudClient.on('status', awsTS.statusCallback);
+      cloudClient.on('message', awsDM.messageCallback);
 
       cloudClient.register (deviceId, { ignoreDeltas: true },
 
@@ -463,7 +464,6 @@ var mqttCloudClientInit = function (callback)
             certPath: "/etc/ssl/certs/"+deviceId+".cert.pem",
             caPath: "/etc/ssl/certs/"+accessKey,
             clientId: deviceId,
-            keepAlive: 45,
             protocol: protocol,
             host: iotHubName});
 

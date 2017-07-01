@@ -206,11 +206,14 @@ exports.onConfigReset = function (request, response)
 {
 	log.debug ("ID: " + request.requestId + ", Method: " + request.methodName + ", Payload: " + JSON.stringify(request.payload));
 
-	// Get the config Reset flag
-	var configResteFlag = request.payload.cloudConfigReset;
-
 	updateRemoteCmdStatus ('configReset', 'Started', 'Resetting config to factory-default....', 'IoTHub triggered configReset');
-	System.resetConfig (configResteFlag, response);
+	// Get the config Reset flag
+	if (request.payload == null) {
+		System.resetConfig (null, response);
+	} else {
+		var configResteFlag = request.payload.cloudConfigReset;
+		System.resetConfig (configResteFlag, response);
+	}
 }
 
 exports.onRemoteDiagnostics = function (request, response)
