@@ -19,12 +19,11 @@ package main
 import (
  
 	"fmt"
-    "io/ioutil"
-    "encoding/json"
+	"io/ioutil"
+	"encoding/json"
 	"os/exec"
 	"time"
 	"sync"
-	"flag"
 	"os"
 	MQTT "github.com/eclipse/paho.mqtt.golang"
 	"github.com/op/go-logging"
@@ -64,77 +63,34 @@ func main () {
  
 func SubscribeMqtt ( ) {
  
-   //...........................start of mqtt initialization..................................
-  
-    topic = flag.String("topic", "topic/sensor/config", "The topic name to/from which to publish/subscribe")
-	broker := flag.String("broker", "tcp://localhost:1883", "The broker URI. ex: tcp://10.10.1.1:1883")
-	
-	id := flag.String("id", "testgoid", "The ClientID (optional)")
-	cleansess := flag.Bool("clean", false, "Set Clean Session (default false)")
-	
-	qos := flag.Int("qos", 0, "The Quality of Service 0,1,2 (default 0)")
-	
-	action := flag.String("action", "pub", "Action publish or subscribe (required)")
-	store := flag.String("store", ":memory:", "The Store Directory (default use memory store)")
-	
-	flag.Parse()
+	mqttBroker := "tcp://localhost:1883"
+	opts := MQTT.NewClientOptions().AddBroker(mqttBroker)
+	opts.SetClientID ("securiot-gpio")
+	//opts.SetCleanSession(*cleansess)
+	opts.SetDefaultPublishHandler(mqttMessageHandler)
 
-	if *action != "pub" && *action != "sub" {
-		fmt.Println("Invalid setting for -action, must be pub or sub")
-		return
-	}
+	client = MQTT.NewClient(opts)
 
-	if *topic == "" {
-		fmt.Println("Invalid setting for -topic, must not be empty")
-		return
-	}
+	if token := client.Connect(); token.Wait() && token.Error() != nil {
 
-	opts := MQTT.NewClientOptions()
-	opts.AddBroker(*broker)
-	
-	opts.SetClientID(*id)
-	opts.SetCleanSession(*cleansess)
-	
-	if *store != ":memory:" {
-	
-		opts.SetStore(MQTT.NewFileStore(*store))
+		panic(token.Error())
 	}
-	  
-	if *action == "pub" {
-	
-		client = MQTT.NewClient(opts)
 		
-		if token := client.Connect(); token.Wait() && token.Error() != nil {
-		    
-			panic(token.Error())
-			
-		}
-		fmt.Println("Sample Publisher Started")
+	if token := client.Subscribe("topic/sensor/config", 0, nil); token.Wait() && token.Error() != nil {
 		
-	} else {
-		
-		opts.SetDefaultPublishHandler(ReadMessage)
-		
-		client := MQTT.NewClient(opts)
-		
-		if token := client.Connect(); token.Wait() && token.Error() != nil {
-		
-			panic(token.Error())
-		}
+		fmt.Println(token.Error())
+		os.Exit(1)
+	}
+}
 
-		if token := client.Subscribe(*topic, byte(*qos), nil); token.Wait() && token.Error() != nil {
-		
-			fmt.Println(token.Error())
-			os.Exit(1)
-			
-		}
-	}
+var mqttMessageHandler MQTT.MessageHandler = func (client MQTT.Client, msg MQTT.Message){
  
- }
-
-var ReadMessage MQTT.MessageHandler = func (client MQTT.Client, msg MQTT.Message){
- 
-	fmt.Println ( msg.Topic(),string(msg.Payload()) )
+	switch (msg.Topic()) {
+		case "topic/sensor/config":
+			fmt.Println ("Config change : %s", string(msg.Payload()))
+		default:
+			fmt.Println ("Unknown topic: %s", string(msg.Topic()))
+	}
 }
   
 func ReadConfigFiles (){
