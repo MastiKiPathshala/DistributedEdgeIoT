@@ -40,9 +40,6 @@ NEW_KERNEL_FILE = WORKING_DIR + '/src/kernel/kernel7.img';
 SERVICES_CONFIG_FILE  = WORKING_DIR + '/build/scripts/softwareUpgrade';
 LIBRARIES_CONFIG_FILE = WORKING_DIR + '/build/scripts/libraryUpgrade';
 
-INTERFACE_CONFIG_FILE = '/etc/network/interfaces';
-INTERFACE_APPEND_FILE = WORKING_DIR + '/build/scripts/interfaceConfig';
-
 KERNEL_CONFIG_FILE      = '/boot/config.txt';
 NEW_KERNEL_CONFIG_FILE  = WORKING_DIR + '/src/kernel/config.txt';
 
@@ -53,8 +50,8 @@ ETC_DIR        = '/etc';
 ETC_CONFIG_DIR = WORKING_DIR + '/tools/sysconfig/';
 
 LOC_LIB_DIR        = '/user/local/lib';
-SELF_LIB_DIR       = WORKING_DIR + '/src/lib/';
-THIRDPARTY_LIB_DIR = WORKING_DIR + '/thirdparty/lib/';
+SELF_LIB_DIR       = WORKING_DIR + '/src/pkg/';
+THIRDPARTY_LIB_DIR = WORKING_DIR + '/thirdparty/pkg/';
 
 CURR_BKUP_DIR   = BKUP_DIR;
 NEW_WORKING_DIR = BKUP_DIR;

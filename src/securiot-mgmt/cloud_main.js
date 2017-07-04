@@ -788,6 +788,18 @@ var updateSensorStatus = function (sensorStatus)
    }
 }
 
+var updateSystemConfig = function (configId)
+{
+   switch (cloudServerType) {
+      case "azure":
+         azureDT.updateSystemConfig (configId);
+         break;
+      case "AWS":
+         awsTS.updateSystemConfig (configId);
+         break;
+   }
+}
+
 var updateSystemStatus = function (systemStatus)
 {
    switch (cloudServerType) {
@@ -828,6 +840,7 @@ var sendRemoteCmdResponse = function (response, status)
 }
 module.exports.updateSensorStatus    = updateSensorStatus;
 module.exports.sendToCloud           = sendToCloud;
+module.exports.updateSystemConfig    = updateSystemConfig;
 module.exports.updateSystemStatus    = updateSystemStatus;
 module.exports.mqttCloudClientInit   = mqttCloudClientInit;
 module.exports.mqttLocalClientInit   = mqttLocalClientInit;
