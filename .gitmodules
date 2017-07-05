@@ -4,9 +4,9 @@
 [submodule "thirdparty/src/github.com/op/go-logging"]
 	path = thirdparty/src/github.com/op/go-logging
 	url = https://github.com/op/go-logging
-[submodule "thirdparty/src/github.com/muka/go-bluetooth"]
-	path = thirdparty/src/github.com/muka/go-bluetooth
-	url = https://github.com/muka/go-bluetooth
+[submodule "thirdparty/src/github.com/saurabh-newera/BLE"]
+	path = thirdparty/src/github.com/saurabh-newera/BLE
+	url = https://github.com/saurabh-newera/BLE
 [submodule "thirdparty/src/golang.org/x/net"]
 	path = thirdparty/src/golang.org/x/net
 	url = https://github.com/golang/net.git
