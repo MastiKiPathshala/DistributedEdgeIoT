@@ -40,7 +40,6 @@ upgrade.post('/:nextVersion', function(req, res, next) {
 var softwareUpgrade = function (upgradeVersion, res) {
    var state = false;
    var upgradePid;
-   //var upgradeVersion = req.params.nextVersion;
 
    log.debug('upgrade version ' + upgradeVersion);
  
@@ -71,71 +70,12 @@ var softwareUpgrade = function (upgradeVersion, res) {
       return;
    }
 
-   redisClient.set(UPGRADE_VERSION_TAG, upgradeVersion, function(err, reply) {
+	var upgradeReq = {};
+	upgradeReq.currentVersion = activeVersion;
+	upgradeReq.upgradeVersion = upgradeVersion;
+	upgradeReq.hardwareVersion = "RPi3";
 
-      if (err) {
-
-         log.debug('upgrade version write failed');
-         io.emit('update', {action:'update',status:'failed'});
-         res.json({success: state});
-         return;
-      }
-    
-      try {
-
-         redisClient.get(UPGRADE_SVC_PID, function(err, reply) {
-         
-            if (err) {
-
-               log.debug('upgrade daemon get pid failed:' + err);
-               log.debug('try again after some time');
-               io.emit('update', {action:'update',status:'failed'});
-               res.json({success: state});
-               upgradeSvcInstall();
-               return;
-            }
-         
-            upgradePid = reply;
-
-            if (upgradePid) {
-
-               log.debug('sending SIGHUP to upgrade daemon:' + upgradePid);
-            
-               try {
-            
-                  process.kill(upgradePid, 'SIGHUP');
-
-               } catch(err){
-            
-                  if (err) {
-
-                     log.debug('sending SIGHUP to upgrade daemon failed:' + err);
-                     io.emit('update', {action:'update',status:'failed'});
-                     upgradeSvcInstall();
-                     return;
-                  }
-               }
-
-               upgradeState += 1;
-               state = true;
-
-            } else {
-
-               log.debug('upgrade daemon get pid failed:' + upgradePid);
-               io.emit('update', {action:'update',status:'failed'});
-               upgradeSvcInstall();
-            }
-         });
-
-      } catch (e) {
-
-         log.debug('upgrade daemon get pid failed:' + e);
-         io.emit('update', {action:'update',status:'failed'});
-         upgradeSvcInstall();
-      }
-   });
- 
-   //res.json({success:state});
+	localClient.publish ("topic/system/config/softwareUpgrade/trigger", JSON.stringify (upgradeReq));
 }
 
 // command functions

@@ -10,22 +10,15 @@ var fs     = require('fs');
 var md5    = require('md5-file');
 var diff   = require('prettydiff');
 var spawn  = require ('child_process').spawn;
-var redis  = require('redis');
+var mqtt   = require('mqtt')
 var async  = require('async');
 var moment = require('moment-timezone');
 
 BASE_MODULE  = 'securiot';
 HOST_HOME    = '/home/Kat@ppa';
 
-MGMT_SVC      = BASE_MODULE + '-mgmt';
-MGMT_SVC_NAME = MGMT_SVC + '-service';
-MGMT_SVC_PID  = MGMT_SVC + '-pid';
-MGMT_SVC_MSG  = MGMT_SVC + '-upgrade-msg';
-
 SVC_MODULE      = BASE_MODULE + '-upgrade';
 SVC_MODULE_NAME = SVC_MODULE + '-service';
-SVC_MODULE_PID  = SVC_MODULE + '-pid';
-SVC_MODULE_MSG  = MGMT_SVC + '-msg';
 
 BASE_DIR    = HOST_HOME + '/' + BASE_MODULE + '-gateway/';
 BKUP_DIR    = HOST_HOME + '/' + BASE_MODULE + '-gateway.bkup/';
@@ -45,9 +38,9 @@ var fileName;
 var swVersion;
 var filePath;
 
-var activeVersionn;
+var currentVersion;
 var upgradeVersion;
-var hwVersion;
+var hardwareVersion;
 
 // set log level as debug
 
@@ -66,74 +59,31 @@ log.methodFactory = function (methodName, logLevel, loggerName) {
 // set log level as debug
 log.setLevel('debug');
 
-//Create Redis Client
-redisClient = redis.createClient();
+//Create MQTT Client
+mqttClient  = mqtt.connect('mqtt://localhost')
 
-redisClient.on("connect", function() {
+mqttClient.on('connect', function () {
+	log.debug('Local MQTT Client connected');
 
-   log.debug('Redis Connected');
-   console.log('Redis Connected');
+	setTimeout(function() {
 
-   // pass on current version and next version
-   setTimeout(function() {
+		currentVersion = process.argv[2];
+		upgradeVersion = process.argv[3];
+		hardwareVersion = process.argv[4];
 
-     activeVersionn = process.argv[2];
-     upgradeVersion = process.argv[3];
-     hwVersion = process.argv[4];
+		svcPkgDownloadStart();
 
-     svcPkgDownloadStart();
-
-   }, SYS_DELAY);
-
-});
-
-/* send a sighup to server process */
-
-var pushSighup = function (pid)
-{
-   try {
-
-      process.kill(pid, 'SIGHUP');
-   } catch (e) {
-
-      log.debug ('send sighup fail ' + pid);
-   }
+	}, SYS_DELAY);
 }
 
-var writeMessage = function(pid, message)
+/* Publish Upgrade status message to internal MQTT topic */
+var publishMessage = function(status, message)
 {
+	var upgradeStatus = {};
+	upgradeStatus.status = status;
+	upgradeStatus.msg = message;
 
-   redisClient.set(MGMT_SVC_MSG, message,
-
-      function(err, reply) {
-
-         if (err) {
-
-            log.debug('status message send failed : '+ err);
-            return;
-         }
-
-         pushSighup(pid);
-      }
-   );
-}
-
-/* write the message to redis database */
-var publishMessage = function(message)
-{
-   redisClient.get(MGMT_SVC_PID,
-
-      function(err, reply) {
-
-         if (err) {
-            log.debug('web-server get pid failed');
-            return;
-         }
-
-         pid = reply;
-         writeMessage(pid, message);
-      }
-   );
+	mqttClient.publish ('topic/system/config/softwareUpgrade/update', JSON.stringify(upgradeStatus));
 }
 
 // command execution functions
@@ -651,24 +601,24 @@ var rootBkupDirCreate = function()
 var svcPkgDownloadStart = function()
 {
    // validate the values to be proper
-   if (!upgradeVersion || !activeVersionn || !hwVersion) {
+   if (!upgradeVersion || !currentVersion || !hardwareVersion) {
 
-      publishMessage(activeVersionn + ' ' + upgradeVersion +
-         ' ' + hwVersion + ': upgrade failed');
+      publishMessage(currentVersion + ' ' + upgradeVersion +
+         ' ' + hardwareVersion + ': upgrade failed');
       setTimeout(procFail, SYS_DELAY);
       return;
    }
 
    //fileName = upgradeVersion + '.tar.gz.signed';
    fileName = upgradeVersion + '.tar.gz';
-   fileUrl  = BASE_URL + hwVersion + '/' + upgradeVersion + '/' + fileName;
+   fileUrl  = BASE_URL + hardwareVersion + '/' + upgradeVersion + '/' + fileName;
    filePath = BKUP_DIR + fileName;
 
-   log.debug('current_version:' + activeVersionn + ' upgradeVersion: ' +
-       upgradeVersion + ' hwVersion:' + hwVersion);
+   log.debug('currentVersion: ' + currentVersion + ', upgradeVersion: ' +
+       upgradeVersion + ', hardwareVersion:' + hardwareVersion);
 
    // bkup current working version, here
-   CURR_BKUP_DIR = BKUP_DIR + activeVersionn;
+   CURR_BKUP_DIR = BKUP_DIR + currentVersion;
 
    log.debug('Upgrade to ' + fileName);
    log.debug('BACKUP DIRECTORY:' + CURR_BKUP_DIR);

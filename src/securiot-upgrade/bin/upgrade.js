@@ -9,6 +9,7 @@ log = require('loglevel');
 var fs     = require('fs');
 var exec   = require('child_process').exec;
 var redis  = require('redis');
+var mqtt   = require('mqtt')
 var spawn  = require ('child_process').spawn;
 var async  = require('async');
 var moment = require('moment-timezone');
@@ -25,15 +26,9 @@ var rebootFlag = false;
 BASE_MODULE  = 'securiot';
 HOST_HOME    = '/home/Kat@ppa';
 
-MGMT_SVC      = BASE_MODULE + '-mgmt';
-MGMT_SVC_NAME = MGMT_SVC + '-service';
-MGMT_SVC_PID  = MGMT_SVC + '-pid';
-MGMT_SVC_MSG  = MGMT_SVC + '-upgrade-msg';
-
 SVC_MODULE      = BASE_MODULE + '-upgrade';
 SVC_MODULE_NAME = SVC_MODULE + '-service';
 SVC_MODULE_PID  = SVC_MODULE + '-pid';
-SVC_MODULE_MSG  = MGMT_SVC + '-msg';
 
 BASE_DIR    = HOST_HOME + '/' + BASE_MODULE + '-gateway/';
 WORKING_DIR = BASE_DIR + 'src/';
@@ -71,6 +66,7 @@ log.setLevel('debug');
 
 /* Redis Client */
 redisClient = redis.createClient();
+mqttClient  = mqtt.connect('mqtt://localhost')
 
 log.debug('start');
 
@@ -129,53 +125,39 @@ redisClient.on("error", function(error) {
    redisUp = false;
 });
 
-/* send a sighup to server process */
+mqttClient.on('connect', function () {
 
-var pushSighup = function (pid)
+	log.debug('Local MQTT Client connected, setting up subscriptions');
+
+	mqttClient.subscribe('topic/system/config/softwareUpgrade/trigger');
+});
+
+mqttClient.on('message', function (topic, data) {
+	log.debug ("Topic: " + topic + ", Message: " + data);
+	switch (topic) {
+		case 'topic/system/config/softwareUpgrade/trigger':
+			var upgradeReq = JSON.parse (data);
+			activeVersion = upgradeReq.currentVersion;
+			upgradeVersion = upgradeReq.upgradeVersion;
+			hwVersion = upgradeReq.hardwareVersion;
+
+			startUpgrade ();
+
+			break;
+		default:
+			log.debug ("Got message from unknown topic");
+			break;
+	}
+});
+
+/* Publish Upgrade status message to internal MQTT topic */
+var publishMessage = function(status, message)
 {
-   try {
+	var upgradeStatus = {};
+	upgradeStatus.status = status;
+	upgradeStatus.msg = message;
 
-      process.kill(pid, 'SIGHUP');
-   } catch (e) {
-
-      log.debug ('send sighup fail ' + pid);
-   }
-}
-
-var writeMessage = function(pid, message)
-{
-
-   redisClient.set(MGMT_SVC_MSG, message,
-
-      function(err, reply) {
-
-         if (err) {
-
-            log.debug('status message send failed : '+ err);
-            return;
-         }
-
-         pushSighup(pid);
-      }
-   );
-}
-
-/* write the message to redis database */
-var publishMessage = function(message)
-{
-   redisClient.get(MGMT_SVC_PID,
-
-      function(err, reply) {
-
-         if (err) {
-            log.debug('web-server get pid failed');
-            return;
-         }
-
-         pid = reply;
-         writeMessage(pid, message);
-      }
-   );
+	mqttClient.publish ('topic/system/config/softwareUpgrade/update', JSON.stringify(upgradeStatus));
 }
 
 /* script exec template */
@@ -254,7 +236,7 @@ var getPkgDone = function(err_code)
 {
    log.debug('get package complete');
 
-   publishMessage('get package complete');
+   publishMessage("In-Progress", 'get package complete');
 
    setTimeout(startInstall, SYSTEM_DELAY);
 }
@@ -262,13 +244,13 @@ var getPkgDone = function(err_code)
 var getPkgErr = function(err_code)
 {
 	log.debug('get package fail!');
-	publishMessage('get package failed');
+	publishMessage("Failed", 'get package failed');
 }
 
 var getPkg = function()
 {
 	log.debug('Invoking get package script ' + activeVersion + '::' + upgradeVersion);
-	publishMessage('fetching package');
+	publishMessage("In-Progress", 'fetching package');
 	execScript(GET_PKG_SCRIPT, getPkgErr, getPkgDone);
 }
 
@@ -279,7 +261,7 @@ var installErr = function(callback)
    installSuccess = false;
    log.debug(runType + ' install failed');
 
-   publishMessage(runType + ' install failed');
+   publishMessage("Failed", runType + ' install failed');
 
    callback();
 }
@@ -293,13 +275,13 @@ var installDone = function(callback)
    if (runType === 'installRest') {
       rebootFlag = true;
    }
-   publishMessage(runType + ': install complete');
+   publishMessage("In-Progress", runType + ': install complete');
    callback();
 }
 
 var installPkg = function(callback)
 {
-   publishMessage(runType + ' installing...');
+   publishMessage("In-Progress", runType + ' installing...');
 
    execScript(INSTALL_SCRIPT, installErr, installDone, callback);
 }
@@ -352,19 +334,19 @@ var startInstall = function()
 
 var restartErr = function()
 {
-   publishMessage('failed');
+   publishMessage("Failed", 'failed');
 }
 
 var restartDone = function()
 {
-   publishMessage('complete');
+   publishMessage("Completed", 'complete');
 }
 
 var restartWebSvc = function()
 {
    log.debug('restarting web-service');
 
-   publishMessage('restart');
+   publishMessage("In-Progress", 'restart');
 
    execScript(RESTART_SCRIPT, restartErr, restartDone);
 }
@@ -377,76 +359,3 @@ var startUpgrade = function()
 
    getPkg();
 }
-
-// fetch hardware version
-
-var fetchHwVersionInfo = function()
-{
-   redisClient.hget("SystemStatus",'hardwareVersion',
-
-      function(err, reply) {
-
-         if (err || !reply) {
-
-            log.debug('hardware version get failed:' + reply + ': ' + err);
-            publishMessage('failed');
-            return;
-
-         } else {
-
-            hwVersion = reply.toString();
-         }
-
-         startUpgrade();
-      }
-   );
-}
-// fetch next version
-var fetchUpgradeVersionInfo = function()
-{
-   redisClient.get('sysSwUpgradeVersion',
-
-      function(err, reply) {
-
-         if (err || !reply) {
-
-            log.debug('upgrade version get failed');
-            publishMessage('failed');
-            return;
-         }
-
-         upgradeVersion = reply.toString();
-
-         fetchHwVersionInfo();
-      }
-   );
-}
-
-// fetch current version
-var fetchActiveVersionInfo = function()
-{
-   redisClient.hget("SystemStatus",'softwareVersion',
-
-      function(err, reply) {
-
-         if (err || !reply) {
-
-            log.debug('fetch active version failed');
-            publishMessage('failed');
-            return;
-         }
-
-         activeVersion = reply.toString();
-
-         fetchUpgradeVersionInfo();
-      }
-   );
-}
-
-// on SIGHUP, start upgrade process
-process.on('SIGHUP', function()
-{
-   log.debug('SIGHUP received');
-
-   fetchActiveVersionInfo();
-});

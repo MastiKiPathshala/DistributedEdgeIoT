@@ -11,7 +11,7 @@ var md5    = require('md5-file');
 var diff   = require('prettydiff');
 var exec   = require('child_process').exec;
 var spawn  = require ('child_process').spawn;
-var redis  = require('redis');
+var mqtt   = require('mqtt')
 var async  = require('async');
 var moment = require('moment-timezone');
 
@@ -21,14 +21,9 @@ BASE_MODULE  = 'securiot';
 HOST_HOME    = '/home/Kat@ppa';
 
 MGMT_SVC      = BASE_MODULE + '-mgmt';
-MGMT_SVC_NAME = MGMT_SVC + '-service';
-MGMT_SVC_PID  = MGMT_SVC + '-pid';
-MGMT_SVC_MSG  = MGMT_SVC + '-upgrade-msg';
 
 SVC_MODULE      = BASE_MODULE + '-upgrade';
 SVC_MODULE_NAME = SVC_MODULE + '-service';
-SVC_MODULE_PID  = SVC_MODULE + '-pid';
-SVC_MODULE_MSG  = MGMT_SVC + '-msg';
 
 BASE_DIR    = HOST_HOME + '/' + BASE_MODULE + '-gateway';
 BKUP_DIR    = HOST_HOME + '/' + BASE_MODULE + '-gateway.bkup/';
@@ -69,7 +64,6 @@ var activeVersion;
 var upgradeVersion;
 var hwVersion;
 var updateState;
-var redisUp = false;
 
 /* prepend timestamp  */
 
@@ -88,81 +82,32 @@ log.methodFactory = function (methodName, logLevel, loggerName) {
 // set log level as debug
 log.setLevel('debug');
 
-//Create Redis Client
-redisClient = redis.createClient();
+//Create MQTT Client
+mqttClient  = mqtt.connect('mqtt://localhost')
 
-redisClient.on("connect", function()
-{
-   redisUp = true;
-   log.debug('Redis Connected');
+mqttClient.on('connect', function () {
+	log.debug('Local MQTT Client connected');
 
-   // pass on current version and next version
-   setTimeout(function() {
+	setTimeout(function() {
 
-      activeVersion = process.argv[2];
-      upgradeVersion = process.argv[3];
-      hwVersion = process.argv[4];
-      updateState = process.argv[5];
+		activeVersion = process.argv[2];
+		upgradeVersion = process.argv[3];
+		hwVersion = process.argv[4];
+		updateState = process.argv[5];
 
-      pkgInstall(activeVersion, upgradeVersion);
+		pkgInstall(activeVersion, upgradeVersion);
 
-     }, SYS_DELAY);
-});
-
-redisClient.on("error", function(error)
-{
-
-   log.debug('redis disconnected (' + error + ')');
-   redisUp = false;
-});
-
-/* send a sighup to server process */
-
-var pushSighup = function (pid)
-{
-   try {
-
-      process.kill(pid, 'SIGHUP');
-   } catch (e) {
-
-      log.debug ('send sighup fail ' + pid);
-   }
+	}, SYS_DELAY);
 }
 
-var writeMessage = function(pid, message)
+/* Publish Upgrade status message to internal MQTT topic */
+var publishMessage = function(status, message)
 {
+	var upgradeStatus = {};
+	upgradeStatus.status = status;
+	upgradeStatus.msg = message;
 
-   redisClient.set(MGMT_SVC_MSG, message,
-
-      function(err, reply) {
-
-         if (err) {
-
-            log.debug('status message send failed : '+ err);
-            return;
-         }
-
-         pushSighup(pid);
-      }
-   );
-}
-
-/* write the message to redis database */
-var publishMessage = function(message)
-{
-   redisClient.get(MGMT_SVC_PID,
-
-      function(err, reply) {
-
-         if (err) {
-            log.debug('web-server get pid failed');
-            return;
-         }
-
-         pid = reply;
-         writeMessage(pid, message);
-      }
-   );
+	mqttClient.publish ('topic/system/config/softwareUpgrade/update', JSON.stringify(upgradeStatus));
 }
 
 // command execution functions
