@@ -74,7 +74,7 @@ mqttClient.on('connect', function () {
 		svcPkgDownloadStart();
 
 	}, SYS_DELAY);
-}
+});
 
 /* Publish Upgrade status message to internal MQTT topic */
 var publishMessage = function(status, message)

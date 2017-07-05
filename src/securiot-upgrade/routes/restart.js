@@ -5,24 +5,20 @@ log = require('loglevel');
 var fs    = require('fs');
 var exec  = require('child_process').exec;
 var spawn = require ('child_process').spawn;
-var redis = require('redis');
+var mqtt   = require('mqtt')
 
 BASE_MODULE  = 'securiot';
 HOST_HOME    = '/home/Kat@ppa';
 
 MGMT_SVC      = BASE_MODULE + '-mgmt';
-MGMT_SVC_NAME = MGMT_SVC + '-service';
-MGMT_SVC_PID  = MGMT_SVC + '-pid';
-MGMT_SVC_MSG  = MGMT_SVC + '-upgrade-msg';
 
 SVC_MODULE      = BASE_MODULE + '-upgrade';
 SVC_MODULE_NAME = SVC_MODULE + '-service';
-SVC_MODULE_PID  = SVC_MODULE + '-pid';
-SVC_MODULE_MSG  = MGMT_SVC + '-msg';
 
 BASE_DIR    = HOST_HOME + '/' + BASE_MODULE + '-gateway/';
 BKUP_DIR    = HOST_HOME + '/' + BASE_MODULE + '-gateway.bkup/';
 WORKING_DIR = BASE_DIR;
+
 SYS_DELAY = 5000;
 
 var activeVersion;
@@ -46,80 +42,34 @@ log.methodFactory = function (methodName, logLevel, loggerName) {
 // set log level as debug
 log.setLevel('debug');
 
-//Create Redis Client
-redisClient = redis.createClient();
+//Create MQTT Client
+mqttClient  = mqtt.connect('mqtt://localhost')
 
-redisClient.on("connect", function() {
+mqttClient.on('connect', function () {
+	log.debug('Local MQTT Client connected');
 
-   redisUp = true;
-   log.debug('Redis Connected');
+	setTimeout(function() {
 
-   // pass on current version and next version
-   setTimeout(function() {
+		activeVersion = process.argv[2];
+		upgradeVersion = process.argv[3];
+		hwVersion = process.argv[4];
+		updateStatus   = process.argv[5];
 
-      activeVersion  = process.argv[2];
-      upgradeVersion = process.argv[3];
-      hwVersion      = process.argv[4];
-      updateStatus   = process.argv[5];
+		pkgRestart(activeVersion, upgradeVersion);
 
-      pkgRestart(activeVersion, upgradeVersion);
-
-     }, SYS_DELAY);
+	}, SYS_DELAY);
 });
 
-redisClient.on("error", function(error) {
-   log.debug(error);
-   redisUp = false;
-});
-
-/* send a sighup to server process */
-
-var pushSighup = function (pid)
+/* Publish Upgrade status message to internal MQTT topic */
+var publishMessage = function(status, message)
 {
-   try {
+	var upgradeStatus = {};
+	upgradeStatus.status = status;
+	upgradeStatus.msg = message;
 
-      process.kill(pid, 'SIGHUP');
-   } catch (e) {
-
-      log.debug ('send sighup fail ' + pid);
-   }
+	mqttClient.publish ('topic/system/config/softwareUpgrade/update', JSON.stringify(upgradeStatus));
 }
 
-var writeMessage = function(pid, message)
-{
-
-   redisClient.set(MGMT_SVC_MSG, message,
-
-      function(err, reply) {
-
-         if (err) {
-
-            log.debug('status message send failed : '+ err);
-            return;
-         }
-
-         pushSighup(pid);
-      }
-   );
-}
-
-/* write the message to redis database */
-var publishMessage = function(message)
-{
-   redisClient.get(MGMT_SVC_PID,
-
-      function(err, reply) {
-
-         if (err) {
-            log.debug('web-server get pid failed');
-            return;
-         }
-
-         pid = reply;
-         writeMessage(pid, message);
-      }
-   );
-}
 // command execution functions
 
 var execCmd = function(cmd, options, working_dir, cb_error, cb_next)
@@ -275,9 +225,8 @@ var pkgRestart = function()
 
    default:
    case 'serviceRestart':
-      serviceRestart(MGMT_SVC_NAME);
-      serviceRestart(HEALTH_SVC_NAME);
-      serviceRestart(SVC_MODULE_NAME);
+      serviceRestart(MGMT_SVC);
+      serviceRestart(SVC_MODULE);
       break;
 
    // this will be called in the context of the install.js file, of the new package

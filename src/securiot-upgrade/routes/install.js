@@ -98,7 +98,7 @@ mqttClient.on('connect', function () {
 		pkgInstall(activeVersion, upgradeVersion);
 
 	}, SYS_DELAY);
-}
+});
 
 /* Publish Upgrade status message to internal MQTT topic */
 var publishMessage = function(status, message)
