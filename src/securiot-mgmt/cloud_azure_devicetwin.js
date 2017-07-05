@@ -13,43 +13,58 @@
  *
  ************************************************************************/
 
-var initConfigChange = function(twin) {
-     var currentTelemetryConfig = twin.properties.reported.telemetryConfig;
-     currentTelemetryConfig.pendingConfig = twin.properties.desired.telemetryConfig;
-     currentTelemetryConfig.status = "Pending";
+var initTelemetryConfigChange = function(twin) {
+	var currentTelemetryConfig = twin.properties.reported.telemetryConfig;
+	currentTelemetryConfig.pendingConfig = twin.properties.desired.telemetryConfig;
 
-     var patch = {
-     telemetryConfig: currentTelemetryConfig
-     };
-     twin.properties.reported.update(patch, function(err) {
-         if (err) {
-             log.debug('Could not report properties');
-         } else {
-             log.debug('Reported pending config change: ' + JSON.stringify(patch));
-             setTimeout(function() {completeConfigChange(twin);}, 60000);
-         }
-     });
+	var patch = {
+		telemetryConfig: currentTelemetryConfig,
+		systemConfig: {
+			configChange: {
+				status: "Pending",
+				requestedConfigId: twin.properties.desired.$version
+			}
+		}
+	};
+	twin.properties.reported.update(patch, function(err) {
+		if (err) {
+			log.debug('Could not report properties');
+		} else {
+			log.debug('Reported pending config change: ' + JSON.stringify(patch));
+			//Update config.txt with this config
+			// Publish this config change to internal MQTT system
+			localClient.publish ('topic/sensor/config', JSON.stringify(currentTelemetryConfig.pendingConfig));
+			completeTelemetryConfigChange(twin);
+		}
+	});
  }
 
-var completeConfigChange =  function(twin) {
-     var currentTelemetryConfig = twin.properties.reported.telemetryConfig;
-     currentTelemetryConfig.configId = currentTelemetryConfig.pendingConfig.configId;
-     currentTelemetryConfig.sendFrequency = currentTelemetryConfig.pendingConfig.sendFrequency;
-     currentTelemetryConfig.status = "Success";
-     delete currentTelemetryConfig.pendingConfig;
+var completeTelemetryConfigChange =  function(twin) {
+	var currentTelemetryConfig = twin.properties.reported.telemetryConfig;
+	var configId = twin.properties.reported.systemConfig.configChange.requestedConfigId;
+	var newTelemetryConfig = currentTelemetryConfig.pendingConfig;
+	delete currentTelemetryConfig.pendingConfig;
+	currentTelemetryConfig = newTelemetryConfig;
 
-     var patch = {
-         telemetryConfig: currentTelemetryConfig
-     };
-     patch.telemetryConfig.pendingConfig = null;
+	var patch = {
+		telemetryConfig: currentTelemetryConfig,
+		systemConfig: {
+			currentConfigId: configId,
+			configChange: {
+				status: "Success",
+				requestedConfigId: configId
+			}
+		}
+	};
+	patch.telemetryConfig.pendingConfig = null;
 
-     twin.properties.reported.update(patch, function(err) {
-         if (err) {
-             console.error('Error reporting properties: ' + err);
-         } else {
-             log.debug('Reported completed config change: ' + JSON.stringify(patch));
-         }
-     });
+	twin.properties.reported.update(patch, function(err) {
+		if (err) {
+			console.error('Error reporting properties: ' + err);
+		} else {
+			log.debug('Reported completed config change: ' + JSON.stringify(patch));
+		}
+	});
 };
 
 exports.updateSensorStatus = function (sensorStatus) {
@@ -72,6 +87,34 @@ exports.updateSensorStatus = function (sensorStatus) {
 						log.error('Sensor Status not updated : ' + err);
 					} else {
 						log.debug('Sensor Status updated: ' + JSON.stringify(patch));
+					}
+				});
+			}
+		});
+	}
+}
+
+exports.updateSystemConfig = function (configId) {
+
+	if (typeof cloudClient != "undefined") {
+
+		cloudClient.getTwin (function (err, twin) {
+			if (err) {
+				log.error ("Azure Client failed to get twin : " + err);
+			} else {
+				var patch = {
+					systemConfig: {
+						currentConfigId: configId
+					},
+					telemetryConfig: {
+						sendFrequency: "24h"
+					}
+				};
+				twin.properties.reported.update(patch, function(err) {
+					if (err) {
+						log.error('System Config Id not updated : ' + err);
+					} else {
+						log.debug('System Config Id updated: ' + JSON.stringify(patch));
 					}
 				});
 			}
@@ -111,20 +154,22 @@ exports.updateSystemStatus = function (systemStatus) {
 }
 
 exports.onConfigChange = function(err, twin) {
-   if (err) {
-      console.error('could not get twin');
-   } else {
-      log.debug('retrieved device twin');
-      twin.properties.reported.telemetryConfig = {
-         configId: "1",
-         sendFrequency: "24h"
-      }
-      twin.on('properties.desired', function(desiredChange) {
-         log.debug("received change: "+JSON.stringify(desiredChange));
-         var currentTelemetryConfig = twin.properties.reported.telemetryConfig;
-         if (desiredChange.telemetryConfig &&desiredChange.telemetryConfig.configId !== currentTelemetryConfig.configId) {
-            initConfigChange(twin);
-         }
-      });
-   }
+
+	if (err) {
+		console.error('Config change notification error: ' + err);
+	} else {
+		log.debug('Config change notification received');
+		twin.on('properties.desired', function(desiredChange) {
+			log.debug("Desired change: " + JSON.stringify(desiredChange));
+			var currentConfig = twin.properties.reported.systemConfig;
+			if (desiredChange.$version !== currentConfig.currentConfigId) {
+				log.debug("Desired config: v" + desiredChange.$version + " different than current config: v" + currentConfig.currentConfigId);
+				if (desiredChange.telemetryConfig) {
+					initTelemetryConfigChange(twin);
+				}
+			} else {
+				log.debug("Desired version: " + desiredChange.$version + " same as current config: " + currentConfig.currentConfigId);
+			}
+		});
+	}
 }

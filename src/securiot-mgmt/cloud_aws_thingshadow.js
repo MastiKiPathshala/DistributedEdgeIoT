@@ -32,20 +32,20 @@ exports.updateSystemStatus = function (systemStatus) {
 	updateAttemptCount++;
 
 	var myThingState = {
-	state: {
-		reported: {
-			SystemStatus: {
-				softwareVersion: systemStatus.softwareVersion,
-				kernelVersion: systemStatus.kernelVersion,
-				hardwareVersion: systemStatus.hardwareVersion,
-				firmwareVersion: systemStatus.firmwareVersion,
-				manufacturer: systemStatus.manufacturer,
-				sensorsAttached: systemStatus.sensorsAttached,
-				lastBootup: systemStatus.lastBootup
+		state: {
+			reported: {
+				SystemStatus: {
+					softwareVersion: systemStatus.softwareVersion,
+					kernelVersion: systemStatus.kernelVersion,
+					hardwareVersion: systemStatus.hardwareVersion,
+					firmwareVersion: systemStatus.firmwareVersion,
+					manufacturer: systemStatus.manufacturer,
+					sensorsAttached: systemStatus.sensorsAttached,
+					lastBootup: systemStatus.lastBootup
+				}
 			}
 		}
 	}
-}
 
 	cloudClientToken = cloudClient.update (deviceId, myThingState);
 

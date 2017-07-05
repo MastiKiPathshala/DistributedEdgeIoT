@@ -427,31 +427,31 @@ router.get('/servers', function(req, res, next)
 
 var checkDeviceStatus = function(callback)
 {
-   devices = '';
+	devices = '';
 
-	var cmd = "sudo forever list --no-colors";
+	var cmd = "lsusb"
 	exec(cmd, function(error, stdout, stderr) {
 
-      if (error != null) {
-         log.error("checkDeviceStatus (" + cmd + ") error: " + error)
-      }
+		if (error != null) {
+			log.error("checkDeviceStatus (" + cmd + ") error: " + error)
+		}
 
-      var data = stdout.toString().split('\n');
+		var data = stdout.toString().split('\n');
+		log.debug( '  device status');
 
-      log.debug( '  device status');
+		for (var idx in data) {
 
-      for (var idx in data) {
+			if (data[idx]) {
 
-         if (data[idx]) {
+				log.debug(data[idx]);
+				devices += data[idx] + '\n';
+			}
+		}
 
-            log.debug(data[idx]);
-
-            devices += data[idx] + '\n';
-         }
-      }
-
-      if (callback) { callback(); }
-   });
+		if (callback) {
+			callback();
+		}
+	});
 }
 
 router.get('/devices', function(req, res, next)

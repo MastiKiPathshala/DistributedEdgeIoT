@@ -9,6 +9,7 @@ log = require('loglevel');
 var fs     = require('fs');
 var md5    = require('md5-file');
 var diff   = require('prettydiff');
+var exec   = require('child_process').exec;
 var spawn  = require ('child_process').spawn;
 var redis  = require('redis');
 var async  = require('async');
@@ -29,37 +30,35 @@ SVC_MODULE_NAME = SVC_MODULE + '-service';
 SVC_MODULE_PID  = SVC_MODULE + '-pid';
 SVC_MODULE_MSG  = MGMT_SVC + '-msg';
 
-BASE_DIR    = HOST_HOME + '/' + BASE_MODULE + '-gateway/';
+BASE_DIR    = HOST_HOME + '/' + BASE_MODULE + '-gateway';
 BKUP_DIR    = HOST_HOME + '/' + BASE_MODULE + '-gateway.bkup/';
 WORKING_DIR = BASE_DIR;
 
 KERNEL_FILE     = '/boot/kernel7.img';
-NEW_KERNEL_FILE = WORKING_DIR + 'src/kernel/kernel7.img';
+NEW_KERNEL_FILE = WORKING_DIR + '/src/kernel/kernel7.img';
 
-SERVICES_CONFIG_FILE  = WORKING_DIR + 'build/scripts/softwareUpgrade';
-LIBRARIES_CONFIG_FILE = WORKING_DIR + 'build/scripts/libraryUpgrade';
-
-INTERFACE_CONFIG_FILE = '/etc/network/interfaces';
-INTERFACE_APPEND_FILE = WORKING_DIR + 'build/scripts/interfaceConfig';
+SERVICES_CONFIG_FILE  = WORKING_DIR + '/build/scripts/softwareUpgrade';
+LIBRARIES_CONFIG_FILE = WORKING_DIR + '/build/scripts/libraryUpgrade';
 
 KERNEL_CONFIG_FILE      = '/boot/config.txt';
-NEW_KERNEL_CONFIG_FILE  = WORKING_DIR + 'src/kernel/config.txt';
+NEW_KERNEL_CONFIG_FILE  = WORKING_DIR + '/src/kernel/config.txt';
 
 KERNEL_CMDLINE_FILE     = '/boot/cmdline.txt';
-NEW_KERNEL_CMDLINE_FILE = WORKING_DIR + 'src/kernel/cmdline.txt';
+NEW_KERNEL_CMDLINE_FILE = WORKING_DIR + '/src/kernel/cmdline.txt';
 
 ETC_DIR        = '/etc';
-ETC_CONFIG_DIR = WORKING_DIR + 'tools/sysconfig/';
+ETC_CONFIG_DIR = WORKING_DIR + '/tools/sysconfig/';
 
 LOC_LIB_DIR        = '/user/local/lib';
-SELF_LIB_DIR       = WORKING_DIR + 'src/lib/';
-THIRDPARTY_LIB_DIR = WORKING_DIR + 'thirdparty/lib/';
+SELF_LIB_DIR       = WORKING_DIR + '/src/pkg/';
+THIRDPARTY_LIB_DIR = WORKING_DIR + '/thirdparty/pkg/';
 
 CURR_BKUP_DIR   = BKUP_DIR;
 NEW_WORKING_DIR = BKUP_DIR;
 
-SYS_DELAY  = 5000;
+SYS_DELAY  = 10000;
 EXIT_DELAY = 10000;
+MV_DELAY   = 30000;
 
 var fileUrl;
 var fileName;
@@ -167,6 +166,70 @@ var publishMessage = function(message)
 }
 
 // command execution functions
+
+var execCmd0 = function(cmd, working_dir, cb_error, cb_next)
+{
+    var retCode = 0;
+
+    var child = spawn(cmd, { cwd : working_dir } ), me = this;
+
+    child.stderr.on('data', function (data) {
+
+       data += ' ';
+       me.stderr = data.toString();
+    });
+
+    child.stdout.on('data', function (data) {
+
+       data += ' ';
+       me.stdout = data.toString();
+       log.debug(cmd + ': OUT:' + me.stdout);
+
+    });
+
+    child.stdout.on('end', function () {
+
+       if (me.stdout) {
+          publishMessage(me.stdout);
+       }
+
+       if (me.stderr) {
+          log.debug(cmd + ': ERR:' + me.stderr);
+       }
+
+    });
+
+    child.on('error', function (err) {
+
+       if (me.stderr) {
+          log.debug(cmd + ': ERR:' + me.stderr);
+       }
+
+       if (me.stdout) {
+          log.debug(cmd + ': OUT:' + me.stdout);
+       }
+
+    });
+
+    child.on('exit', function (code, signal)
+          { if (code) {retCode = code;} });
+
+    child.on('close', function (code) {
+
+       if (code) {retCode = code;}
+
+       if (retCode) {
+
+          log.debug ('Err:(' + retCode + ') '+ cmd );
+          setTimeout(cb_error, SYS_DELAY);
+
+       } else {
+
+          log.debug ('End: ' + cmd );
+          setTimeout(cb_next, SYS_DELAY);
+       }
+    });
+}
 
 var execCmd = function(cmd, options, working_dir, cb_error, cb_next)
 {
@@ -284,15 +347,21 @@ var execCmd1 = function(cmd, options, args1, working_dir, cb_error, cb_next)
 
        if (code) {retCode = code;}
 
+       var delay = SYS_DELAY;
+
+       if (cmd == 'mv') {
+           delay = MV_DELAY;
+       }
+
        if (retCode) {
 
           log.debug ('Err:(' + retCode + ') ' + cmd + ' ' + options + ' ' + args1);
-          setTimeout(cb_error, SYS_DELAY);
+          setTimeout(cb_error, delay);
 
        } else {
 
           log.debug ('End: ' + cmd + ' ' + options + ' ' + args1);
-          setTimeout(cb_next, SYS_DELAY);
+          setTimeout(cb_next, delay);
 
        }
     });
@@ -423,7 +492,7 @@ var copyDirCmd = function (donor_dir, receiver_dir, cb_error, cb_next, callback)
 
 var mkDirCmd = function (dir, cb_error, cb_next, callback)
 {
-   var create_dir = execCmd1('mkdir', '-p', dir, BASE_DIR,
+   var cmd = execCmd1('mkdir', '-p', dir, BASE_DIR,
 
        // on error
        function () {
@@ -467,8 +536,30 @@ var rmCmd = function(file_name, cb_error, cb_next)
     );
 }
 
-var cmd_move = function (dir0, dir1, cb_error, cb_next)
+var syncCmd = function (cb_error, cb_next)
 {
+   var cmd = execCmd('sudo', 'sync', BASE_DIR,
+
+       // on error
+       function () {
+          if (cb_error) {
+             cb_error();
+          }
+       },
+
+       // on end
+       function () {
+          if (cb_next) {
+             cb_next();
+          }
+       }
+    );
+}
+
+var moveCmd = function (dir0, dir1, cb_error, cb_next)
+{
+   log.debug('mv ' + dir0 + ' ' + dir1);
+
    var cmd = execCmd1('mv', dir0, dir1, BASE_DIR,
 
        // on error
@@ -661,20 +752,31 @@ var diagSvcStop = function()
 
 var newWorkingDirMove = function()
 {
-   log.debug('move ' + NEW_WORKING_DIR + ' ' + WORKING_DIR);
+   var cmd = 'sudo mv ' +  NEW_WORKING_DIR + ' ' + WORKING_DIR;
+   log.debug(cmd);
+
+   exec(cmd, function(err, stdout, stderr) {
+      webSvcStart();
+   });
 
    // now the tricky work, move the new version to working
-   cmd_move(NEW_WORKING_DIR, WORKING_DIR, webSvcStart,
+/*
+   moveCmd(NEW_WORKING_DIR, WORKING_DIR, webSvcStart,
         webSvcStart);
+*/
 }
 
-var workingDirMove = function()
+var fileSystemSync = function()
 {
-   log.debug('move ' + WORKING_DIR + ' ' + CURR_BKUP_DIR);
+   var cmd = 'sync;sleep 10;sync';
 
-   // now the tricky work, backup the working version
-   cmd_move(WORKING_DIR, CURR_BKUP_DIR, newWorkingDirMove,
-      newWorkingDirMove);
+   log.debug('sync:' );
+
+   //syncCmd(newWorkingDirMove, newWorkingDirMove);
+   exec(cmd, function(err, stdout, stderr) {
+      newWorkingDirMove();
+   });
+
 }
 
 var webSvcStop = function()
@@ -684,7 +786,15 @@ var webSvcStop = function()
    publishMessage('gateway installation complete');
 
    // now the tricky work, move the new version to working
-   serviceCmd(MGMT_SVC_NAME, 'stop', workingDirMove, workingDirMove);
+   serviceCmd(MGMT_SVC, 'stop', fileSystemSync, fileSystemSync);
+}
+
+var workingDirMove = function()
+{
+   log.debug('move ' + WORKING_DIR + ' ' + CURR_BKUP_DIR);
+
+   // now the tricky work, backup the working version
+   moveCmd(WORKING_DIR, CURR_BKUP_DIR, webSvcStop, webSvcStop); 
 }
 
 var webSvcPkgDelete = function()
@@ -694,7 +804,8 @@ var webSvcPkgDelete = function()
    publishMessage('web service package updated, restarting');
 
    // delete web_service pkg file
-   rmCmd(filePath, webSvcInstallErr, webSvcStop);
+   //rmCmd(filePath, webSvcInstallErr, webSvcStop);
+   rmCmd(filePath, webSvcInstallErr, workingDirMove);
 }
 
 var webSvcPkgInstall = function()
@@ -716,12 +827,20 @@ var workingDirCreate = function()
    mkDirCmd(NEW_WORKING_DIR, webSvcPkgInstall, webSvcPkgInstall);
 }
 
-var bkupDirDelete = function()
+var currBkupDirDelete = function()
 {
-   publishMessage('cleaning working dir :' + NEW_WORKING_DIR);
+   publishMessage('cleaning any old bkupdir dir :' + CURR_BKUP_DIR);
 
    // remove the working directory
-   rmCmd(NEW_WORKING_DIR, workingDirCreate, workingDirCreate);
+   rmCmd(CURR_BKUP_DIR, workingDirCreate, workingDirCreate);
+}
+
+var bkupDirDelete = function()
+{
+   publishMessage('cleaning any old working dir :' + NEW_WORKING_DIR);
+
+   // remove the working directory
+   rmCmd(NEW_WORKING_DIR, currBkupDirDelete, currBkupDirDelete);
 }
 
 var procOk = function(callback)
@@ -1006,14 +1125,14 @@ var pkgInstall = function()
       updateState = 'installPkg';
 
       // get the package file name, proper
-      fileName = 'v' + upgradeVersion + '.tar.gz';
+      fileName = upgradeVersion + '.tar.gz';
       filePath = BKUP_DIR + fileName;
 
       // bkup working version, here
-      CURR_BKUP_DIR = BKUP_DIR + 'v' + activeVersion;
+      CURR_BKUP_DIR = BKUP_DIR + activeVersion;
 
       // the new working dir
-      NEW_WORKING_DIR = BKUP_DIR + 'v'+ upgradeVersion;
+      NEW_WORKING_DIR = BKUP_DIR + upgradeVersion;
 
       log.debug('installing ' + upgradeVersion + ': ' + fileName + ' in ' + hwVersion);
 

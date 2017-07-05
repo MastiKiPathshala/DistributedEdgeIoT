@@ -164,12 +164,19 @@ system.post('/', function(req, res) {
 		cloudConnect.updateRemoteCmdStatus ('reboot', 'In-Progress', 'Device rebooting ....', null);
         break;
 
-    default:
-        log.warn(' received unknown request');
-        res.writeHead(200);
-        res.end('{"status":true}');
-        break;
-   }
+	case "configReset":
+		log.debug(' received config reset request');
+		var configResetFlag = body.configResetFlag;
+		cloudConnect.updateRemoteCmdStatus ('configReset', 'Started', 'Resetting config to factory-default....', 'User Agent triggered configReset');
+		resetConfig (configResetFlag, res);
+		break;
+
+	default:
+		log.warn(' received unknown request');
+		res.writeHead(200);
+		res.end('{"status":true}');
+		break;
+	}
 });
 
 var addStatic = function(iface, data, cb) {
@@ -387,19 +394,6 @@ function scanNetworks(iface, cb) {
     }.bind({ iface: iface, cb: cb }));
 }
 
-var restartSystem = function() {
-   log.info(' system restart');
-
-   exec('sudo reboot', function(err, stdout, stderr) {
-      if (err) {
-          log.warn(err + stderr);
-      } else {
-          log.debug(stdout);
-      }
-   });
-}
-
-
 var getInterfaces = function(callback)
 {
    ifconfig.status(function(err, status) {
@@ -434,5 +428,42 @@ var getInterfaces = function(callback)
     })
 }
 
+var restartSystem = function() {
+
+	log.info(' system restart');
+	exec('sudo reboot', function(err, stdout, stderr) {
+		if (err) {
+			log.warn(err + stderr);
+		} else {
+			log.debug(stdout);
+		}
+	});
+}
+
+var resetConfig = function(configResetFlag, response) {
+
+	if (configResetFlag === null) {
+		// Flag is NULL, retain cloud configuration
+		log.debug ("Flag is NULL, retain cloud configuration");
+	} else {
+		// Flag is set, overwrite cloud configuration
+		log.debug ("Flag is set, overwrite cloud configuration");
+		var cmd = "cp /etc/securiot.in/config.default " + "/etc/securiot.in/config.txt";
+		exec(cmd, function(err, stdout, stderr) {
+			if (err) {
+				log.error ("Copying factory default config failed : " + err);
+				cloudConnect.updateRemoteCmdStatus ('configReset', 'Failed', 'Copying factory default config failed', '');
+				cloudConnect.sendRemoteCmdResponse ('configReset', response, {success: 'false', msg: 'Copying factory default config failed'});
+			} else {
+				log.debug ("Config reset to factory default..rebooting");
+				cloudConnect.updateRemoteCmdStatus ('configReset', 'Completed', 'Config reset to factory default', '');
+				cloudConnect.sendRemoteCmdResponse ('configReset', response, {success: 'true', msg: 'Config reset to factory default'});
+				restartSystem ();
+			}
+		});
+	}
+}
+
 module.exports = system;
 module.exports.restartSystem = restartSystem;
+module.exports.resetConfig = resetConfig;

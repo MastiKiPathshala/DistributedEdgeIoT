@@ -1,12 +1,41 @@
 /*************************************************************************
  *
- * $file: <file name>
+ * $file: cloud_azure_directmethod.js
  *
- * @brief: <brief description of file>
+ * @brief: Handles direct messages from AWS
  *
- * @author: <Author name and email>
+ * @author: Prosenjit Pal
+ *
+ * @date: 07 June 2017 First version of Azure Direct Message handler code
+ *        05 July 2017 Updated with command details and command status details
  *
- * @date: <date with change log in reverse chronological order>
+ * Azure commands for device management (C -> D):
+ *
+ * Software Upgrade
+ * {"requestId":"<Request ID>", "methodName":"softwareUpgrade", "payload":{"fwPackageUri":"<SecurIoT Gateway software version>"}}
+ *
+ * Reset Configuration to Factory Default
+ * {"requestId":"<Request ID>", "methodName":"configReset"[, "payload":{"cloudConfigReset":"true | false"}]}
+ *
+ * Send Remote Diagnostics
+ * {"requestId":"<Request ID>", "methodName":"remoteDiagnostics"}
+ *
+ * Reboot
+ * {"requestId":"<Request ID>", "methodName":"reboot"}
+ *
+ * Azure deviceTwin structure for device management command status
+ * properties : {
+ * 	reported : {
+ * 		remoteCommand : {
+ * 			<remote command> : {
+ * 				cmdStatus : "Started | In-Progress | Completed | Failed",
+ * 				cmdMsg : "Last message related to command execution",
+ * 				cmdSource : "Who triggered the command"
+ * 				lastCmd : "Dat and Time of last remote command"
+ *			}
+ * 		}
+ * 	}
+ * }
  *
  * This file is subject to the terms and conditions defined in
  * file 'LICENSE.txt', which is part of this source code package.
@@ -156,14 +185,14 @@ var updateRemoteCmdStatus = function (cmd, status, msg, source)
 
 	var date = new Date();
 	var patch = {};
-	patch.RemoteCommand = {};
-	patch.RemoteCommand[cmd] = {
+	patch.remoteCommand = {};
+	patch.remoteCommand[cmd] = {
 		cmdStatus: status,
 		cmdMsg: msg,
 	};
 	if (status == 'Started') {
-		patch.RemoteCommand[cmd]['lastCmd'] = date.toISOString();
-		patch.RemoteCommand[cmd]['cmdSource'] = source;
+		patch.remoteCommand[cmd]['lastCmd'] = date.toISOString();
+		patch.remoteCommand[cmd]['cmdSource'] = source;
 	}
 
 	// Get device Twin
@@ -205,13 +234,15 @@ exports.onReboot = function(request, response)
 exports.onConfigReset = function (request, response)
 {
 	log.debug ("ID: " + request.requestId + ", Method: " + request.methodName + ", Payload: " + JSON.stringify(request.payload));
-	response.send(200, 'Factory Reset started', function(err) {
-		if (!err) {
-			log.error('An error occured when sending a method response:\n' + err.toString());
-		} else {
-			log.debug('Response to method \'' + request.methodName + '\' sent successfully.');
-		}
-	});
+
+	updateRemoteCmdStatus ('configReset', 'Started', 'Resetting config to factory-default....', 'IoTHub triggered configReset');
+	// Get the config Reset flag
+	if (request.payload == null) {
+		System.resetConfig (null, response);
+	} else {
+		var configResteFlag = request.payload.cloudConfigReset;
+		System.resetConfig (configResteFlag, response);
+	}
 }
 
 exports.onRemoteDiagnostics = function (request, response)
