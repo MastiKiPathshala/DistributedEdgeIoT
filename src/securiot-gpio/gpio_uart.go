@@ -18,7 +18,7 @@ package main
 import (
 	
 	"fmt"
-    "encoding/json"
+	"encoding/json"
 	"os/exec"
 	"time"
  )
@@ -51,19 +51,16 @@ func TakeGpsData () {
 	}
 
 	lat := latlon["lat"]
-	
 	lon := latlon["lon"]
 	
 	if lat != nil && lon != nil {
 
-		latStr := fmt.Sprint(lat.(float64)+10.0)
-		//fmt.Println("latitude ", latStr)
+		latStr := fmt.Sprint(lat)
 	
 		log.Critical("latitude critical", latStr)
 	
-		lonStr := fmt.Sprint(lon.(float64)+12.0)
+		lonStr := fmt.Sprint(lon)
 	
-		//fmt.Println("longitude ", lonStr)
 		log.Debug("longitude debug", lonStr)
 	
 		gpsData := latStr+"-"+lonStr+"-"+sensorDataType

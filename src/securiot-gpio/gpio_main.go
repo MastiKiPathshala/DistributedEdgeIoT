@@ -22,7 +22,6 @@ import (
 	"io/ioutil"
 	"encoding/json"
 	"os/exec"
-	"time"
 	"sync"
 	"os"
 	MQTT "github.com/eclipse/paho.mqtt.golang"
@@ -193,8 +192,7 @@ func validateProtocolDataType (protocol, dataType string){
 	switch matchDataType {
 	    
 		case "gps":
-			//sensorStatus := [{sensorType:"humid", SensorDetails:{"sensorId":""}}]
-			
+
 			type details struct {
 				SensorId string
 			}
@@ -222,30 +220,16 @@ func validateProtocolDataType (protocol, dataType string){
 				fmt.Println(token.Error())
 			}
 
-		 
 			out1, err1 := exec.Command( "bash", "-c", "sudo gpsd /dev/ttyS0 -F /var/run/gpsd.sock").Output()
             _,_ = out1,err1
 			
 		    GpsSensorData (matchDataType)
 			
-		case "HY":
-		    
-		    BleSensor ()
-			
-			wg.Add (3)
+			wg.Add (1)
 	        
 	}
-	 
-	 
 }
   
-func BleSensor(){
-	
-	    time.AfterFunc(1000*time.Millisecond, BleSensor)
-	    log.Warning("Warning","ble-HY")
-		
-}
- 
 func RaspberryUartHw (){
  
 	fmt.Println("RaspberryUartHw")

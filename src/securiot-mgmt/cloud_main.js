@@ -1,12 +1,23 @@
 /*************************************************************************
  *
- * $file: mqtt_broker.js
+ * $file: cloud_main.js
  *
  * @brief: cloud module code
  *
  * @authors: Saurabh Singh, Prosenjit Pal, Srinibas Maharana
  *
  * @date: 15 May 2017 First version of broker code..data sending to azure server
+ *
+ * AWS topic for sending sensor data (D -> C):
+ * SecurIoT.in/thing/<device ID>/topic/sensor/data
+ *
+ * Internal MQTT topic (between processes within SecurIoT gateway)
+ *
+ * topic/sensor/config - sensor config messages from mgmt service to BLE, gpio etc. services
+ * topic/sensor/status - connected sensor status from BLE, gpio etc. services to mgmt service
+ * topic/sensor/data/<datatype> - sensor data from BLE, gpio etc. services to mgmt service
+ * topic/system/config/softwareUpgrade/trigger - Software Upgrade trigger to upgrade service
+ * topic/system/config/softwareUpgrade/update - Software Upgrade status from upgrade service
  *
  * This file is subject to the terms and conditions defined in
  * file 'LICENSE.txt', which is part of this source code package.
@@ -227,7 +238,7 @@ var mqttLocalClientInit = function(callback)
 
 				case "topic/system/config/softwareUpgrade/update":
 
-					// Receive update message from securiot-upgrade process
+					// Receive update message from securiot-upgrade service
 					updateRemoteCmdStatus ('softwareUpgrade', data.status, data.msg, '');
 					break;
 
@@ -662,47 +673,39 @@ var mqttRelayDataSend = function (finalData,forwardingRule)
 
 var sendToCloud = function(sensorData, callback)
 {
-	log.trace("data to be send to the azure cloud: "+sensorData);
 	switch (cloudServerType) {
 
-   case "azure":
-      var message = new Message (sensorData);
+		case "azure":
+			var message = new Message (sensorData);
 
-      cloudClient.sendEvent(message, function (err) {
+			cloudClient.sendEvent(message, function (err) {
 
-         if (err) {
+				if (err) {
 
-            if (callback) {
+					if (callback) {
+						callback(err);
+					} else {
+						log.error ("sensor data send failed : " + err.toString());
+						pushDataToStorage(sensorData);
+					}
+					cloudStateOn();
+				} else {
 
-               callback(err);
-            } else {
+					if (callback) {
+						callback(err);
+					}
+					cloudStateOff();
+					log.trace ("Message sent : " + message);
+				}
+			});
+			break;
 
-               log.error ("sensor data send failed : " + err.toString());
-               pushDataToStorage(sensorData);
-
-            }
-
-            cloudStateOn();
-
-         } else {
-
-            if (callback) {
-
-               callback(err);
-            }
-
-            cloudStateOff();
-
-            log.trace ("Message sent : " + message);
-         }
-      });
-
-      break;
-
-   case "AWS":
-
-      break;
-   }
+		case "AWS":
+			awsSensorDataTopic = awsBaseTopic+'/topic/sensor/data';
+			cloudClient.publish(awsSensorDataTopic, JSON.stringify (sensorData));
+			log.debug("Topic: " + awsSensorDataTopic + " Message: " + sensorData);
+			break;
+	}
 }
 
 var pushDataToStorage = function (sensorData)
@@ -777,66 +780,66 @@ var writeOneTuple = function (file, sensorData)
 }
 
 var updateSensorStatus = function (sensorStatus)
-{	log.debug("cloudServerType: "+cloudServerType);
-   switch (cloudServerType) {
-      case "azure":
-         azureDT.updateSensorStatus (sensorStatus);
-         break;
-      case "AWS":
-         awsTS.updateSensorStatus (sensorStatus);
-         break;
-   }
+{
+	switch (cloudServerType) {
+		case "azure":
+			azureDT.updateSensorStatus (sensorStatus);
+			break;
+		case "AWS":
+			awsTS.updateSensorStatus (sensorStatus);
+			break;
+	}
 }
 
 var updateSystemConfig = function (configId)
 {
-   switch (cloudServerType) {
-      case "azure":
-         azureDT.updateSystemConfig (configId);
-         break;
-      case "AWS":
-         awsTS.updateSystemConfig (configId);
-         break;
-   }
+	switch (cloudServerType) {
+		case "azure":
+			azureDT.updateSystemConfig (configId);
+			break;
+		case "AWS":
+			awsTS.updateSystemConfig (configId);
+			break;
+	}
 }
 
 var updateSystemStatus = function (systemStatus)
 {
-   switch (cloudServerType) {
-      case "azure":
-         azureDT.updateSystemStatus (systemStatus);
-         break;
-      case "AWS":
-         awsTS.updateSystemStatus (systemStatus);
-         break;
-   }
+	switch (cloudServerType) {
+		case "azure":
+			azureDT.updateSystemStatus (systemStatus);
+			break;
+		case "AWS":
+			awsTS.updateSystemStatus (systemStatus);
+			break;
+	}
 }
 
 var updateRemoteCmdStatus = function (cmd, status, msg, source)
 {
-   // io.emit to gatewayUI
-   io.emit(cmd, { action: status, status: msg});
-   // update Azure Device Twin or AWS Thing Shadow
-   switch (cloudServerType) {
-      case "azure":
-         azureDM.updateRemoteCmdStatus (cmd, status, msg, source);
-         break;
-      case "AWS":
-         awsDM.updateRemoteCmdStatus (cmd, status, msg, source);
-         break;
-   }
+	// io.emit to gatewayUI
+	io.emit(cmd, { action: status, status: msg});
+	// update Azure Device Twin or AWS Thing Shadow
+	switch (cloudServerType) {
+		case "azure":
+			azureDM.updateRemoteCmdStatus (cmd, status, msg, source);
+			break;
+		case "AWS":
+			awsDM.updateRemoteCmdStatus (cmd, status, msg, source);
+			break;
+	}
 }
 
 var sendRemoteCmdResponse = function (response, status)
 {
-   switch (cloudServerType) {
-      case "azure":
-         azureDM.sendRemoteCmdResponse (response, status);
-         break;
-      case "AWS":
-         //awsDM.sendRemoteCmdResponse (response, status);
-         break;
-   }
+	switch (cloudServerType) {
+		case "azure":
+			azureDM.sendRemoteCmdResponse (response, status);
+			break;
+		case "AWS":
+			//awsDM.sendRemoteCmdResponse (response, status);
+			break;
+	}
 }
 module.exports.updateSensorStatus    = updateSensorStatus;
 module.exports.sendToCloud           = sendToCloud;

@@ -8,9 +8,40 @@
  *
  * @date: 07 June 2017 First version of AWS Direct Message handler code
  *
+ * AWS topic for device management (C -> D):
+ * SecurIoT.in/thing/<device ID>/topic/remoteconfig
+ *
+ * Commands are :
+ *
+ * Software Upgrade
+ * {"method":"softwareUpgrade", "payload":{"fwPackageUri":"<SecurIoT Gateway software version>"}}
+ *
+ * Reset Configuration to Factory Default
+ * {"method":"configReset"[, "payload":{"cloudConfigReset":"true | false"}]}
+ *
+ * Send Remote Diagnostics
+ * {"method":"remoteDiagnostics"}
+ *
+ * Reboot
+ * {"method":"reboot"}
+ *
+ * AWS thingShadow structure for device management command status
+ * state : {
+ * 	reported : {
+ * 		remoteCommand : {
+ * 			<remote command> : {
+ * 				cmdStatus : "Started | In-Progress | Completed | Failed",
+ * 				cmdMsg : "Last message related to command execution",
+ * 				cmdSource : "Who triggered the command"
+ * 				lastCmd : "Dat and Time of last remote command"
+ *			}
+ * 		}
+ * 	}
+ * }
+ *
  * This file is subject to the terms and conditions defined in
  * file 'LICENSE.txt', which is part of this source code package.
- *
+ *
  ************************************************************************/
 
 var exec = require('child_process').exec;
@@ -61,14 +92,14 @@ var updateRemoteCmdStatus = function (cmd, status, msg, source)
 	var myThingState = {};
 	myThingState.state = {};
 	myThingState.state.reported = {};
-	myThingState.state.reported.RemoteCommand = {};
-	myThingState.state.reported.RemoteCommand[cmd] = {
+	myThingState.state.reported.remoteCommand = {};
+	myThingState.state.reported.remoteCommand[cmd] = {
 		cmdStatus: status,
 		cmdMsg: msg,
 	}
 	if (status == 'Started') {
-		myThingState.state.reported.RemoteCommand[cmd]['lastCmd'] = date.toISOString();
-		myThingState.state.reported.RemoteCommand[cmd]['cmdSource'] = source;
+		myThingState.state.reported.remoteCommand[cmd]['lastCmd'] = date.toISOString();
+		myThingState.state.reported.remoteCommand[cmd]['cmdSource'] = source;
 	}
 	
 	cloudClientToken = cloudClient.update (deviceId, myThingState);
