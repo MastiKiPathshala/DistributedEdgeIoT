@@ -15,10 +15,10 @@
 package main
 
 import (
-	"github.com/muka/go-bluetooth/api"
-	"github.com/muka/go-bluetooth/devices"
+	"github.com/saurabh-newera/BLE/api"
+	"github.com/saurabh-newera/BLE/devices"
 	logging "github.com/op/go-logging"
-	"github.com/muka/go-bluetooth/emitter"
+	"github.com/saurabh-newera/BLE/emitter"
 	"fmt"
 	MQTT "github.com/eclipse/paho.mqtt.golang"
 	//"reflect"

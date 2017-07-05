@@ -206,10 +206,7 @@ func validateProtocolDataType (protocol, dataType string){
 					SensorType: "gps",
 					SensorDetails:  &[]details{{SensorId:"aaa"},{SensorId:"axz"},},
 				},
-				{
-					SensorType: "temp",
-					SensorDetails:  &[]details{{SensorId:"zzz"},},
-				},
+				
 			}
 			sensorStatus,_ := json.Marshal(status)
 			fmt.Println(string(sensorStatus))
