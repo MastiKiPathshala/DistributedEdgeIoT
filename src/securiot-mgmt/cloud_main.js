@@ -88,7 +88,7 @@ var azureConnectCallback = function (err)
    //   }, 1000);
    } else {
       log.debug('Azure Cloud Client connected');
-      cloudClient.on('message', azureC2D.onC2DMessage);
+      //cloudClient.on('message', azureC2D.onC2DMessage);
       //client.receive (function (err, res, msg) {
       cloudClient.getTwin(azureDT.onConfigChange);
       cloudClient.onDeviceMethod('softwareUpgrade', azureDM.onSoftwareUpgrade);
@@ -256,11 +256,9 @@ var mqttLocalClientInit = function(callback)
 					var gpsData       = data.toString();
 					var splitOutput   = gpsData.split("-");
 					var healthScore   = parseFloat(splitOutput[0]);
-					var finalScore    = healthScore*2.5;
 					var finalGpsData  = JSON.stringify({ sno : gpsCount.toString(), gatewayId : uniqueGetwayId,
 						sensorId : "gps-"+uniqueGetwayId, dataType : splitOutput[2],
-						latitude : splitOutput[0], longitude : splitOutput[1],time : currentTime,
-						qualityScore :finalScore })
+						latitude : splitOutput[0], longitude : splitOutput[1], time : currentTime});
 
 					mqttRelayDataSend (finalGpsData,forwardingRule);
 					break;
@@ -274,10 +272,13 @@ var mqttLocalClientInit = function(callback)
 					var gyroscope = data.toString();
 					var splitGyroscope =gyroscope.split("-");
 					var gyroscopeData = splitGyroscope[0];
-					var finalScore = 8;
+					var splitGyroscopeData = gyroscopeData.split(",");
+					var gyroscopeX = parseFloat(splitGyroscopeData[0]);
+					var gyroscopeY = parseFloat(splitGyroscopeData[1]);
+					var gyroscopeZ = parseFloat(splitGyroscopeData[2]);
 					var finalGyroscopeData = JSON.stringify({sno :gyroscopeCount .toString(), gatewayId : uniqueGetwayId, 
-						sensorId : "gyroscope-"+splitGyroscope[1], dataType :splitGyroscope[2],dataUnit:splitGyroscope[3],
-						gyroscope:gyroscopeData, time : currentTime,qualityScore :finalScore})
+					sensorId : "gyroscope-"+splitGyroscope[1], dataType :splitGyroscope[2],dataUnit:splitGyroscope[3],
+					gyroscope_x:gyroscopeX, gyroscope_y:gyroscopeY, gyroscope_z:gyroscopeZ, time : currentTime})
 
 					mqttRelayDataSend (finalGyroscopeData,forwardingRule);
 					break;	
@@ -291,10 +292,13 @@ var mqttLocalClientInit = function(callback)
 					var accelerometer = data.toString();
 					var splitAccelerometer = accelerometer.split("-");
 					var accelerometerData = splitAccelerometer[0];
-					var finalScore = 18;
+					var splitAccelerometerData = accelerometerData.split(",");
+					var accelerometerX = parseFloat(splitAccelerometerData[0]);
+					var accelerometerY = parseFloat(splitAccelerometerData[1]);
+					var accelerometerZ = parseFloat(splitAccelerometerData[2]);
 					var finalAccelerometerData = JSON.stringify({sno :gyroscopeCount .toString(), gatewayId : uniqueGetwayId, 
-						sensorId : " accelerometer-"+splitAccelerometer[1], dataType :splitAccelerometer[2],dataUnit:splitAccelerometer[3],
-						accelerometer:accelerometerData, time : currentTime,qualityScore :finalScore})
+					sensorId : " accelerometer-"+splitAccelerometer[1], dataType :splitAccelerometer[2],dataUnit:splitAccelerometer[3],
+					accelerometer_x:accelerometerX, accelerometer_y:accelerometerY, accelerometer_z:accelerometerZ, time : currentTime})
 
 					mqttRelayDataSend (finalAccelerometerData,forwardingRule);
 					break;
@@ -308,10 +312,13 @@ var mqttLocalClientInit = function(callback)
 					var magnetometer = data.toString();
 					var splitMagnetometer = magnetometer.split("-");
 					var  magnetometerData = splitMagnetometer[0];
-					var finalScore = 85;
+					var splitMagnetometerData = magnetometerData.split(",");
+					var magnetometerX = parseFloat(splitMagnetometerData[0]);
+					var magnetometerY = parseFloat(splitMagnetometerData[1]);
+					var magnetometerZ = parseFloat(splitMagnetometerData[2]);
 					var finalMagnetometerData = JSON.stringify({sno :gyroscopeCount .toString(), gatewayId : uniqueGetwayId, 
 						sensorId : " magnetometer-"+splitMagnetometer[1], dataType :splitMagnetometer[2],dataUnit:splitMagnetometer[3],
-						magnetometer: magnetometerData, time : currentTime,qualityScore :finalScore})
+						magnetometer_x: magnetometerX, magnetometer_y: magnetometerY, magnetometer_z: magnetometerZ, time : currentTime})
 
 					mqttRelayDataSend (finalMagnetometerData,forwardingRule);
 					break;	
@@ -325,10 +332,9 @@ var mqttLocalClientInit = function(callback)
 					var tempData = data.toString();
 					var splitTemp = tempData.split("-");
 					var tempData = parseFloat(splitTemp[0]);
-					var finalScore = tempData + 12;
 					var finalTempData = JSON.stringify({sno : tempCount.toString(), gatewayId : uniqueGetwayId, 
 						sensorId : "ambTemp-"+splitTemp[1], dataType : splitTemp[2], dataUnit: splitTemp[3],
-						temperature : tempData ,time : currentTime,qualityScore :finalScore})
+						ambientTemp : tempData, time : currentTime})
 
 					mqttRelayDataSend (finalTempData,forwardingRule);
 					break;
@@ -342,10 +348,9 @@ var mqttLocalClientInit = function(callback)
 					var tempData = data.toString();
 					var splitTemp = tempData.split("-");
 					var tempData = parseFloat(splitTemp[0]);
-					var finalScore = tempData + 10;
 					var finalTempData = JSON.stringify({sno : tempCount.toString(), gatewayId : uniqueGetwayId, 
 						sensorId : "objTemp-"+ splitTemp[1], dataType : splitTemp[2],dataUnit: splitTemp[3],
-						temperature : tempData ,time : currentTime,qualityScore :finalScore})
+						objectTemp : tempData, time : currentTime})
 
 					mqttRelayDataSend (finalTempData,forwardingRule);
 					break;
@@ -359,10 +364,9 @@ var mqttLocalClientInit = function(callback)
 					var barometricPressure = data.toString();
 					var splitBarometricPressure = barometricPressure.split("-");
 					var barometricPressureData = parseFloat(splitBarometricPressure[0]);
-					var finalScore = barometricPressureData-8;
 					var finalPressureData = JSON.stringify({sno :pressureCount .toString(), gatewayId : uniqueGetwayId, 
 						sensorId : "pressure-"+splitBarometricPressure[1], dataType :splitBarometricPressure[2],dataUnit:splitBarometricPressure[3],
-						pressure:barometricPressureData, time : currentTime,qualityScore :finalScore})
+						pressure:barometricPressureData, time : currentTime})
 
 					mqttRelayDataSend (finalPressureData,forwardingRule);
 					break;
@@ -378,14 +382,13 @@ var mqttLocalClientInit = function(callback)
 					var humidData = data.toString();
 					var splitHumid = humidData.split("-");
 					var humidData = parseFloat(splitHumid[0]);
-					var finalScore = humidData-18;
 					var finalHumidData = JSON.stringify({sno :humidCount.toString(), gatewayId : uniqueGetwayId, 
 						sensorId : "humid-"+ splitHumid[1], dataType : splitHumid[2],dataUnit: splitHumid[3],
-						humidity :humidData, time : currentTime,qualityScore :finalScore})
+						humidity :humidData, time : currentTime})
 
 					mqttRelayDataSend (finalHumidData,forwardingRule);
 					break;
-				case "topic/sensor/data/humidity":
+				case "topic/sensor/data/luxometer":
 
 					luxometerCount ++;
 					var now = moment();
@@ -394,10 +397,9 @@ var mqttLocalClientInit = function(callback)
 					var luxometer = data.toString();
 					var splitLuxometer =luxometer.split("-");
 					var luxometerData = splitLuxometer[0];
-					var finalScore = 15;
 					var finalLuxometerDataData = JSON.stringify({sno :gyroscopeCount .toString(), gatewayId : uniqueGetwayId, 
 						sensorId : "luxometer-"+splitLuxometer[1], dataType :splitLuxometer[2],dataUnit:splitLuxometer[3],
-						luxometer: luxometerData, time : currentTime,qualityScore :finalScore})
+						luxometer: luxometerData, time : currentTime})
 
 					mqttRelayDataSend (finalLuxometerDataData,forwardingRule);
 					break;	
@@ -409,10 +411,9 @@ var mqttLocalClientInit = function(callback)
 					var splitNo2     = no2Data.split("-");
 					var makeNo2Data  = parseFloat(splitNo2[0]);
 					var finalNo2     = makeNo2Data+7.0;
-					var finalScore   = finalNo2 + 14;
 					var finalNo2Data = JSON.stringify({sno : no2Count.toString(), gatewayId : uniqueGetwayId,
 						sensorId : "no2-"+uniqueGetwayId, dataType : splitNo2[2],
-						no2 : finalNo2 ,time : currentTime,qualityScore :finalScore})
+						no2 : finalNo2 ,time : currentTime})
 
 					mqttRelayDataSend (finalNo2Data,forwardingRule);
 					break;
@@ -425,10 +426,9 @@ var mqttLocalClientInit = function(callback)
 					var splitSo2     = so2Data.split("-");
 					var makeSo2Data  = parseFloat(splitSo2[0]);
 					var finalSo2     = makeSo2Data+15.0;
-					var finalScore   = finalSo2 -5;
 					var finalSo2Data = JSON.stringify({sno : so2Count.toString(), gatewayId : uniqueGetwayId,
 						sensorId : "so2-"+uniqueGetwayId, dataType : splitSo2[2],
-						so2 : finalSo2,time : currentTime ,qualityScore :finalScore})
+						so2 : finalSo2,time : currentTime })
 
 					mqttRelayDataSend (finalSo2Data,forwardingRule);
 					break;
@@ -487,137 +487,6 @@ var mqttCloudClientInit = function (callback)
          cloudClient.on('error', awsErrorCallback);
          break;
       }
-   }
-
-   if (callback) { callback(); }
-}
-
-var mqttGatewayRelayInit = function(callback)
-{
-
-   log.debug('MQTT relay init');
-
-   exec('cat /sys/class/net/eth0/address',
-
-      function (error, stdout, stderr) {
-
-         if (error != null) {
-               log.debug('exec error: ' + error);
-         }
-
-         var wlan       = stdout;
-         var mac        = wlan.split("\n");
-         uniqueGetwayId = mac[0].toString();
-   });
-
-   if (typeof localClient != "undefined") {
-
-      log.debug(' setting up the subscriptions for Local MQTT Client');
-      localClient.on('connect', function () {
-
-         log.debug('Local MQTT Client connected, setting up subscriptions');
-         localClient.subscribe('no2-data');
-         localClient.subscribe('so2-data');
-         localClient.subscribe('gps-data');
-         localClient.subscribe('temp-data');
-         localClient.subscribe('humid-data');
-      });
-   }
-
-   //var finalData;
-
-   if (typeof localClient != "undefined") {
-
-      localClient.on('message', function (topic, data) {
-
-         log.debug(data.toString());
-
-         var now = moment();
-         var currentTime   = now.tz("America/New_York").format('YYYY-MM-DDTHH:mm:ss.SSSZZ');
-
-         switch (topic) {
-
-         case "gps-data":
-
-            gpsCount ++;
-
-            var gpsData       = data.toString();
-            var splitOutput   = gpsData.split("-");
-            var healthScore   = parseFloat(splitOutput[0]);
-            var finalScore    = healthScore*2.5;
-            var finalGpsData  = JSON.stringify({ sno : gpsCount.toString(), gatewayId : uniqueGetwayId,
-                   sensorId : "gps-"+uniqueGetwayId, dataType : splitOutput[2],
-                   latitude : splitOutput[0], longitude : splitOutput[1],time : currentTime,
-                   qualityScore :finalScore })
-
-            mqttRelayDataSend (finalGpsData);
-            break;
-
-         case "temp-data":
-
-            tempCount ++;
-
-            var tempData      = data.toString();
-            var splitTemp     = tempData.split("-");
-            var makeTempData  = parseFloat(splitTemp[0]);
-            var finalTemp     = makeTempData*3.0;
-            var finalScore    = finalTemp + 12;
-            var finalTempData = JSON.stringify({sno : tempCount.toString(), gatewayId : uniqueGetwayId,
-                     sensorId : "temp-"+uniqueGetwayId, dataType : splitTemp[2],
-                     temperature : finalTemp ,time : currentTime,qualityScore :finalScore})
-
-            mqttRelayDataSend (finalTempData);
-            break;
-
-         case "humid-data":
-
-            humidCount ++;
-
-            var humidData      = data.toString();
-            var splitHumid     = humidData.split("-");
-            var makeHumidData  = parseFloat(splitHumid[1]);
-            var finalHumid     = makeHumidData+20.0;
-            var finalScore     = finalHumid -18;
-            var finalHumidData = JSON.stringify({sno :humidCount.toString(), gatewayId : uniqueGetwayId,
-                     sensorId : "humid-"+uniqueGetwayId, dataType : splitHumid[2],
-                     humidity : finalHumid ,time : currentTime,qualityScore :finalScore})
-
-            mqttRelayDataSend (finalHumidData);
-            break;
-
-         case "no2-data":
-
-            no2Count ++;
-
-            var no2Data      = data.toString();
-            var splitNo2     = no2Data.split("-");
-            var makeNo2Data  = parseFloat(splitNo2[0]);
-            var finalNo2     = makeNo2Data+7.0;
-            var finalScore   = finalNo2 + 14;
-            var finalNo2Data = JSON.stringify({sno : no2Count.toString(), gatewayId : uniqueGetwayId,
-                     sensorId : "no2-"+uniqueGetwayId, dataType : splitNo2[2],
-                     no2 : finalNo2 ,time : currentTime,qualityScore :finalScore})
-
-            mqttRelayDataSend (finalNo2Data);
-             break;
-
-         case "so2-data":
-
-            so2Count ++
-
-            var so2Data      = data.toString();
-            var splitSo2     = so2Data.split("-");
-            var makeSo2Data  = parseFloat(splitSo2[0]);
-            var finalSo2     = makeSo2Data+15.0;
-            var finalScore   = finalSo2 -5;
-            var finalSo2Data = JSON.stringify({sno : so2Count.toString(), gatewayId : uniqueGetwayId,
-                     sensorId : "so2-"+uniqueGetwayId, dataType : splitSo2[2],
-                     so2 : finalSo2,time : currentTime ,qualityScore :finalScore})
-
-            mqttRelayDataSend (finalSo2Data);
-            break;
-         }
-      });
    }
 
    if (callback) { callback(); }
@@ -841,12 +710,12 @@ var sendRemoteCmdResponse = function (response, status)
 			break;
 	}
 }
+
 module.exports.updateSensorStatus    = updateSensorStatus;
 module.exports.sendToCloud           = sendToCloud;
 module.exports.updateSystemConfig    = updateSystemConfig;
 module.exports.updateSystemStatus    = updateSystemStatus;
 module.exports.mqttCloudClientInit   = mqttCloudClientInit;
 module.exports.mqttLocalClientInit   = mqttLocalClientInit;
-module.exports.mqttGatewayRelayInit  = mqttGatewayRelayInit;
 module.exports.sendRemoteCmdResponse = sendRemoteCmdResponse;
 module.exports.updateRemoteCmdStatus = updateRemoteCmdStatus;

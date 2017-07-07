@@ -145,7 +145,7 @@ var appMaintenanceRestart = function()
 }
 
 // start a time for the maintenance restart
-setTimeout(appMaintenanceRestart, SECURIOT_MAINTENANCE_TIMEOUT);
+//setTimeout(appMaintenanceRestart, SECURIOT_MAINTENANCE_TIMEOUT);
 
 var appSetLogLevel = function(callback)
 {
@@ -444,30 +444,6 @@ var appGetHardwareVersion = function(callback)
    });
 }
 
-//Boot time hostname check
-var appSetHostName = function(cb)
-{
-   var hostname  = 'SecurIoTGW';
-
-   log.debug('set host name');
-   exec('hostname', function (error, stdout, stderr) {
-
-      if (error != null) {
-
-         log.debug('exec error in hostfile: ' + error);
-      } else {
-
-        var activeHostName = '';
-        activeHostName = stdout;
-        activeHostName = activeHostName.trim();
-        activeHostName = activeHostName.replace(/\r?\n|\r/g, "");
-
-      }
-
-      if (cb) { cb(); }
-   });
-}
-
 var appSetState = function()
 {
 
@@ -525,6 +501,7 @@ var appSetState = function()
       function(callback) {
          cloudConnect.mqttCloudClientInit(callback);
       },
+
       // software version
       function(callback) {
 
@@ -534,16 +511,6 @@ var appSetState = function()
       function(callback) {
          connectivity.connectivityCheckInit(callback);
       },
-
-      // mqtt relay local and cloud client
-      function(callback) {
-
-         cloudConnect.mqttGatewayRelayInit(callback);
-      },
-      // initialize host name
-      function(callback) {
-         appSetHostName(callback);
-      }
    ]);
 }
 
