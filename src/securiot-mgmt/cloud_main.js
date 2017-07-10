@@ -228,7 +228,7 @@ var mqttLocalClientInit = function(callback)
 		log.trace("data from " + topic + " topic : " + data.toString());
 
 		localMqttMsgHandler(topic, data);
-        });
+   });
 
 	if (fs.existsSync('/etc/securiot.in/config.txt')) {
 
@@ -236,8 +236,6 @@ var mqttLocalClientInit = function(callback)
 		parsedConfigData = JSON.parse(localConfigData);
 
 		forwardingRule = parsedConfigData.gatewaySaurabhpi.forwarding_rules;
-
-
 	}
 
 	if (callback) {

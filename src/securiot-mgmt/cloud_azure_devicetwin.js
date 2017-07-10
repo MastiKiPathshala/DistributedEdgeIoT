@@ -13,7 +13,10 @@
  *
  ************************************************************************/
 
+var configModule = require('./cloud_config');
+
 var initTelemetryConfigChange = function(twin) {
+
 	var currentTelemetryConfig = twin.properties.reported.telemetryConfig;
 	currentTelemetryConfig.pendingConfig = twin.properties.desired.telemetryConfig;
 
@@ -26,14 +29,20 @@ var initTelemetryConfigChange = function(twin) {
 			}
 		}
 	};
+
 	twin.properties.reported.update(patch, function(err) {
+
 		if (err) {
 			log.debug('Could not report properties');
 		} else {
 			log.debug('Reported pending config change: ' + JSON.stringify(patch));
+
 			//Update config.txt with this config
+
 			// Publish this config change to internal MQTT system
-			localClient.publish ('topic/sensor/config', JSON.stringify(currentTelemetryConfig.pendingConfig));
+			//localClient.publish ('topic/sensor/config', JSON.stringify(currentTelemetryConfig.pendingConfig));
+			configModule.publishCurrentConfig(twin);
+
 			completeTelemetryConfigChange(twin);
 		}
 	});
