@@ -55,7 +55,14 @@ exports.publishNewConfig = function(data)
 
 var publishSensorConfig = function(data)
 {
-	log.debug('publishing sensor config');
+	var localFrequency = 0;
+	var cloudFrequency = 0;
+
+	if (data) {
+	   log.debug('publishing sensor config:' + JSON.stringify(data.properties.desired));
+	} else {
+	   log.debug('publishing sensor config');
+	}
 
 	if (fs.existsSync('/etc/securiot.in/config.txt')) {
 
@@ -76,22 +83,33 @@ var publishSensorConfig = function(data)
 
 			for (var idx in parsedLocalConfig.telemetryConfig) {
 
-				var found = false;
-				var localSensorConfig = parsedLocalConfig.telemetryConfig[idx];
+				if (idx === 'frequency') {
+					localFrequency = parsedLocalConfig.telemetryConfig[idx];
+				} else {
 
-				if (typeof parsedCloudConfig != "undefined") {
+					var found = false;
+					var localSensorConfig = parsedLocalConfig.telemetryConfig[idx];
 
-					for (var jdx in parsedCloudConfig.telemetryConfig) {
+					if (typeof parsedCloudConfig != "undefined") {
 
-						if (idx == jdx) {
-							found = true;
+						for (var jdx in parsedCloudConfig.telemetryConfig) {
+
+							if (jdx === 'frequency') {
+
+								cloudFrequency = parsedCloudConfig.telemetryConfig[jdx];
+							} else {
+
+								if (idx == jdx) {
+									found = true;
+								}
+							}
 						}
 					}
-				}
 
-				if (found === false) {
-					log.debug('delete sensor:' + JSON.stringify(localSensorConfig));
-					localClient.publish(mqttDeleteTopic, JSON.stringify (localSensorConfig));
+					if (found === false) {
+						log.debug('delete sensor:' + JSON.stringify(localSensorConfig));
+						localClient.publish(mqttDeleteTopic, JSON.stringify (localSensorConfig));
+					}
 				}
 			}
 		}
@@ -101,22 +119,28 @@ var publishSensorConfig = function(data)
 
 			for (var idx in parsedCloudConfig.telemetryConfig) {
 
-				var found = false;
-				var cloudSensorConfig = parsedCloudConfig.telemetryConfig[idx];
+				if (idx != 'frequency') {
 
-				if (typeof parsedLocalConfig != "undefined" ) {
+					var found = false;
+					var cloudSensorConfig = parsedCloudConfig.telemetryConfig[idx];
 
-					for (var jdx in parsedLocalConfig.telemetryConfig) {
+					if (typeof parsedLocalConfig != "undefined" ) {
 
-						if (idx == jdx) {
-							found = true;
+						for (var jdx in parsedLocalConfig.telemetryConfig) {
+
+							if (jdx != 'frequency') {
+
+								if (idx == jdx) {
+									found = true;
+								}
+							}
 						}
 					}
-				}
 
-				if (found === false) {
-					log.debug('add sensor:' + JSON.stringify(cloudSensorConfig));
-					localClient.publish(mqttAddTopic, JSON.stringify (cloudSensorConfig));
+					if (found === false) {
+						log.debug('add sensor:' + JSON.stringify(cloudSensorConfig));
+						localClient.publish(mqttAddTopic, JSON.stringify (cloudSensorConfig));
+					}
 				}
 			}
 		}
@@ -127,17 +151,19 @@ var publishSensorConfig = function(data)
 
 			for (var idx in parsedCloudConfig.telemetryConfig) {
 
-				var found = false;
-				var cloudSensorConfig = parsedCloudConfig.telemetryConfig[idx];
+				if (idx != 'frequency') {
+					var cloudSensorConfig = parsedCloudConfig.telemetryConfig[idx];
 
-				for (var jdx in parsedLocalConfig.telemetryConfig) {
+					for (var jdx in parsedLocalConfig.telemetryConfig) {
 
-					var localSensorConfig = parsedLocalConfig.telemetryConfig[jdx];
+						var localSensorConfig = parsedLocalConfig.telemetryConfig[jdx];
 
-					if ((idx == jdx) &&
-						 (cloudSensorConfig.frequency != localSensorConfig.frequency)) {
-						log.debug('update sensor:' + JSON.stringify(cloudSensorConfig));
-						localClient.publish(mqttUpdateTopic, JSON.stringify (cloudSensorConfig));
+						if ((jdx != 'frequency') && (idx == jdx) &&
+							 (cloudSensorConfig.frequency != localSensorConfig.frequency)) {
+
+							log.debug('update sensor:' + JSON.stringify(cloudSensorConfig));
+							localClient.publish(mqttUpdateTopic, JSON.stringify (cloudSensorConfig));
+						}
 					}
 				}
 			}

@@ -52,6 +52,7 @@ var completeTelemetryConfigChange =  function(twin) {
 	var currentTelemetryConfig = twin.properties.reported.telemetryConfig;
 	var configId = twin.properties.reported.systemConfig.configChange.requestedConfigId;
 	var newTelemetryConfig = currentTelemetryConfig.pendingConfig;
+
 	delete currentTelemetryConfig.pendingConfig;
 	currentTelemetryConfig = newTelemetryConfig;
 
@@ -65,7 +66,6 @@ var completeTelemetryConfigChange =  function(twin) {
 			}
 		}
 	};
-	patch.telemetryConfig.pendingConfig = null;
 
 	twin.properties.reported.update(patch, function(err) {
 		if (err) {
