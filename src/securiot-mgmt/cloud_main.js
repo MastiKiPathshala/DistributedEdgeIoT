@@ -250,6 +250,8 @@ var localMqttMsgHandler = function (topic, data)
 	var now = moment();
 	var currentTime   = now.tz("America/New_York").format('YYYY-MM-DDTHH:mm:ss.SSSZZ');
 
+	log.trace("data from topic: " + topic + " data : " + data.toString());
+
 	switch (topic) {
 
 		case "topic/sensor/config/request":
@@ -450,6 +452,7 @@ var localMqttMsgHandler = function (topic, data)
 			break;
 	}
 }
+
 var mqttCloudClientInit = function (callback)
 {
    log.debug('MQTT cloud client init');
@@ -502,52 +505,60 @@ var mqttCloudClientInit = function (callback)
    if (callback) { callback(); }
 }
 
-var mqttRelayDataSend = function (finalData,forwardingRule)
+var mqttRelayDataSend = function (finalData, forwardingRule)
 {
    log.trace("data from local broker: "+finalData);
 
-   for (var rule in forwardingRule) {
-	
-      switch (forwardingRule[rule].match.data_type) {
-		
-      case "any":
+	if (typeof forwardingRule === "undefined" ||
+		forwardingRule === null) {
 
-         switch(forwardingRule[rule].then.send_to) {
+		sendToCloud(finalData);
 
-         case "cloud":
-            sendToCloud(finalData);
-            return;
+	} else {
 
-         case "analytics":
-
-            //sendToAnaltics(dataForForwarding);
-            return;
-
-         case "daisy-chained":
-            return;
-
+      for (var rule in forwardingRule) {
+	      
+         switch (forwardingRule[rule].match.data_type) {
+	   	
+         case "any":
+      
+            switch(forwardingRule[rule].then.send_to) {
+      
+            case "cloud":
+               sendToCloud(finalData);
+               return;
+      
+            case "analytics":
+      
+               //sendToAnaltics(dataForForwarding);
+               return;
+      
+            case "daisy-chained":
+               return;
+      
+            }
+            break;
+      
+         case "HY":
+      
+            switch(forwardingRule[rule].then.sendto) {
+      
+            case "cloud":
+               //sendToCloud(mesage);
+               return;
+      
+            case "analytics":
+               //sendToAnaltics(message);
+               return;
+      
+            case "daisy-chained":
+               return;
+      
+            }
+            break;
          }
-         break;
-
-      case "HY":
-
-         switch(forwardingRule[rule].then.sendto) {
-
-         case "cloud":
-            //sendToCloud(mesage);
-            return;
-
-         case "analytics":
-            //sendToAnaltics(message);
-            return;
-
-         case "daisy-chained":
-            return;
-
-         }
-         break;
       }
-   }
+	}
 }
 
 var sendToCloud = function(sensorData, callback)
@@ -556,7 +567,7 @@ var sendToCloud = function(sensorData, callback)
 
 		case "azure":
 			var message = new Message (sensorData);
-
+			log.trace("sensorData to azure cloud: "+JSON.stringify(message));
 			cloudClient.sendEvent(message, function (err) {
 
 				if (err) {
