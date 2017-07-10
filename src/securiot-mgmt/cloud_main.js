@@ -38,7 +38,7 @@ var awsIoT   = require('aws-iot-device-sdk');
 var awsTS    = require('./cloud_aws_thingshadow');
 var awsDM    = require('./cloud_aws_directmessage');
 
-var configModule = require(./cloud_config');
+var configModule = require('./cloud_config');
 
 var EventEmitter = require('events').EventEmitter;
 

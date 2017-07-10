@@ -1,4 +1,4 @@
- *
+/*
  * @brief: cloud config module
  *
  * @authors: Saurabh Singh, Prosenjit Pal, Srinibas Maharana
@@ -21,10 +21,10 @@ var exec     = require('child_process').exec;
 var mqtt     = require('mqtt')
 var moment   = require('moment-timezone');
 
-var mqttAddTopic     = "topic/sensor/config/add":
-var mqttDeleteTopic  = "topic/sensor/config/delete":
-var mqttRequestTopic = "topic/sensor/config/request":
-var mqttUpdateTopic  = "topic/sensor/config/update":
+var mqttAddTopic     = "topic/sensor/config/add";
+var mqttDeleteTopic  = "topic/sensor/config/delete";
+var mqttRequestTopic = "topic/sensor/config/request";
+var mqttUpdateTopic  = "topic/sensor/config/update";
 
 exports.cloudConfigHandler = function(topic, data)
 {
@@ -121,7 +121,7 @@ var publishSensorConfig = function(data)
 
 					var localSensorConfig = parsedLocalConfig.telemetryConfig[jdx];
 
-					if (idx == jdx) &&
+					if ((idx == jdx) &&
 						 (cloudSensorConfig.frequency != localSensorConfig.frequency)) {
 					    localClient.publish(mqttUpdateTopic, JSON.stringify (cloudSensorConfig));
 					}
