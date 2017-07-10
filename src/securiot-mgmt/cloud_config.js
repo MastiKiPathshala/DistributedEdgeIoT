@@ -55,7 +55,8 @@ exports.publishNewConfig = function(data)
 
 var publishSensorConfig = function(data)
 {
-	log.debug('publishing local sensor config');
+	log.debug('publishing sensor config');
+
 	if (fs.existsSync('/etc/securiot.in/config.txt')) {
 
 		var localConfigFile   = fs.readFileSync('/etc/securiot.in/config.txt');
