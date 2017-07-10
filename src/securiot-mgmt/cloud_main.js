@@ -38,6 +38,8 @@ var awsIoT   = require('aws-iot-device-sdk');
 var awsTS    = require('./cloud_aws_thingshadow');
 var awsDM    = require('./cloud_aws_directmessage');
 
+var configModule = require(./cloud_config');
+
 var EventEmitter = require('events').EventEmitter;
 
 var uniqueGatewayId;
@@ -197,8 +199,8 @@ var awsErrorCallback = function (err)
 var mqttLocalClientInit = function(callback)
 {
    log.debug('MQTT local client init');
-   exec('cat /sys/class/net/eth0/address',
 
+   exec('cat /sys/class/net/eth0/address',
       function (error, stdout, stderr) {
 
          if (error != null) {
@@ -208,7 +210,25 @@ var mqttLocalClientInit = function(callback)
          var wlan       = stdout;
          var mac        = wlan.split("\n");
          uniqueGatewayId = mac[0].toString();
-});
+	});
+
+	localClient    = mqtt.connect('mqtt://localhost')
+
+	localClient.on('connect', function () {
+
+		log.debug('Local MQTT Client connected, setting up subscriptions');
+		
+		localClient.subscribe('topic/sensor/data/#');
+		localClient.subscribe('topic/sensor/status');
+		localClient.subscribe('topic/system/config/softwareUpgrade/update');
+	});
+
+	localClient.on('message', function (topic, data) {
+
+		log.trace("data from " + topic + " topic : " + data.toString());
+
+		localMqttMsgHandler(topic, data);
+        });
 
 	if (fs.existsSync('/etc/securiot.in/config.txt')) {
 
@@ -216,225 +236,220 @@ var mqttLocalClientInit = function(callback)
 		parsedConfigData = JSON.parse(localConfigData);
 
 		forwardingRule = parsedConfigData.gatewaySaurabhpi.forwarding_rules;
-		localClient    = mqtt.connect('mqtt://localhost')
 
-		localClient.on('connect', function () {
 
-			log.debug('Local MQTT Client connected, setting up subscriptions');
-			
-			localClient.subscribe('topic/sensor/data/#');
-			localClient.subscribe('topic/sensor/status');
-			localClient.subscribe('topic/system/config/softwareUpgrade/update');
-		})
-
-		localClient.on('message', function (topic, data) {
-
-			log.trace("data from " + topic + " topic : " + data.toString());
-
-			var now = moment();
-			var currentTime   = now.tz("America/New_York").format('YYYY-MM-DDTHH:mm:ss.SSSZZ');
-
-			switch (topic) {
-
-				case "topic/system/config/softwareUpgrade/update":
-
-					// Receive update message from securiot-upgrade service
-					updateRemoteCmdStatus ('softwareUpgrade', data.status, data.msg, '');
-					break;
-
-				case "topic/sensor/status":
-					
-					// Report list of sensor types to properties/reported/SensorStatus
-					
-					updateSensorStatus (data);
-					break;
-
-				case "topic/sensor/data/gps":
-
-					gpsCount ++;
-
-					var gpsData       = data.toString();
-					var splitOutput   = gpsData.split("-");
-					var healthScore   = parseFloat(splitOutput[0]);
-					var finalGpsData  = JSON.stringify({ sno : gpsCount.toString(), gatewayId : uniqueGatewayId,
-						sensorId : "gps-"+uniqueGatewayId, dataType : splitOutput[2],
-						latitude : splitOutput[0], longitude : splitOutput[1], time : currentTime});
-
-					mqttRelayDataSend (finalGpsData,forwardingRule);
-					break;
-			
-				case "topic/sensor/data/gyroscope":
-
-					gyroscopeCount ++;
-					var now = moment();
-					var currentTime = now.tz("America/New_York").format('YYYY-MM-DDTHH:mm:ss.SSSZZ');
-			
-					var gyroscope = data.toString();
-					var splitGyroscope =gyroscope.split("-");
-					var gyroscopeData = splitGyroscope[0];
-					var splitGyroscopeData = gyroscopeData.split(",");
-					var gyroscopeX = parseFloat(splitGyroscopeData[0]);
-					var gyroscopeY = parseFloat(splitGyroscopeData[1]);
-					var gyroscopeZ = parseFloat(splitGyroscopeData[2]);
-					var finalGyroscopeData = JSON.stringify({sno :gyroscopeCount .toString(), gatewayId : uniqueGatewayId,
-					sensorId : "gyroscope-"+splitGyroscope[1], dataType :splitGyroscope[2],dataUnit:splitGyroscope[3],
-					gyroscope_x:gyroscopeX, gyroscope_y:gyroscopeY, gyroscope_z:gyroscopeZ, time : currentTime})
-
-					mqttRelayDataSend (finalGyroscopeData,forwardingRule);
-					break;	
-		
-				case "topic/sensor/data/accelerometer":
-
-					accelerometerCount ++;
-					var now = moment();
-					var currentTime = now.tz("America/New_York").format('YYYY-MM-DDTHH:mm:ss.SSSZZ');
-			
-					var accelerometer = data.toString();
-					var splitAccelerometer = accelerometer.split("-");
-					var accelerometerData = splitAccelerometer[0];
-					var splitAccelerometerData = accelerometerData.split(",");
-					var accelerometerX = parseFloat(splitAccelerometerData[0]);
-					var accelerometerY = parseFloat(splitAccelerometerData[1]);
-					var accelerometerZ = parseFloat(splitAccelerometerData[2]);
-					var finalAccelerometerData = JSON.stringify({sno :gyroscopeCount .toString(), gatewayId : uniqueGatewayId,
-					sensorId : " accelerometer-"+splitAccelerometer[1], dataType :splitAccelerometer[2],dataUnit:splitAccelerometer[3],
-					accelerometer_x:accelerometerX, accelerometer_y:accelerometerY, accelerometer_z:accelerometerZ, time : currentTime})
-
-					mqttRelayDataSend (finalAccelerometerData,forwardingRule);
-					break;
-			
-				case "topic/sensor/data/magnetometer":
-
-					magnetometerCount ++;
-					var now = moment();
-					var currentTime = now.tz("America/New_York").format('YYYY-MM-DDTHH:mm:ss.SSSZZ');
-			
-					var magnetometer = data.toString();
-					var splitMagnetometer = magnetometer.split("-");
-					var  magnetometerData = splitMagnetometer[0];
-					var splitMagnetometerData = magnetometerData.split(",");
-					var magnetometerX = parseFloat(splitMagnetometerData[0]);
-					var magnetometerY = parseFloat(splitMagnetometerData[1]);
-					var magnetometerZ = parseFloat(splitMagnetometerData[2]);
-					var finalMagnetometerData = JSON.stringify({sno :gyroscopeCount .toString(), gatewayId : uniqueGatewayId,
-						sensorId : " magnetometer-"+splitMagnetometer[1], dataType :splitMagnetometer[2],dataUnit:splitMagnetometer[3],
-						magnetometer_x: magnetometerX, magnetometer_y: magnetometerY, magnetometer_z: magnetometerZ, time : currentTime})
-
-					mqttRelayDataSend (finalMagnetometerData,forwardingRule);
-					break;	
-		
-				case "topic/sensor/data/ambientTemperature":
-				case "topic/sensor/data/objectTemperature":
-
-					tempCount ++;
-					var now = moment();
-					var currentTime = now.tz("America/New_York").format('YYYY-MM-DDTHH:mm:ss.SSSZZ');
-			
-					var tempData = data.toString();
-					var splitTemp = tempData.split("-");
-					var sensorDataType = splitTemp[2];
-					var sensorData = parseFloat(splitTemp[0]);
-					var finalTempData = {sno : tempCount, gatewayId : uniqueGatewayId,
-						sensorId : sensorDataType+"-"+splitTemp[1], dataType : sensorDataType, dataUnit: splitTemp[3],
-						time : currentTime}
-					finalTempData[sensorDataType] = sensorData;
-
-					mqttRelayDataSend (JSON.stringify(finalTempData),forwardingRule);
-					break;
-/*	
-				case "topic/sensor/data/objectTemperature":
-
-					tempCount ++;
-					var now = moment();
-					var currentTime = now.tz("America/New_York").format('YYYY-MM-DDTHH:mm:ss.SSSZZ');
-			
-					var tempData = data.toString();
-					var splitTemp = tempData.split("-");
-					var tempData = parseFloat(splitTemp[0]);
-					var finalTempData = JSON.stringify({sno : {N: tempCount}, gatewayId : {S: uniqueGatewayId}, 
-						sensorId : {S: "objTemp-"+ splitTemp[1]}, dataType : {S: splitTemp[2]},dataUnit: {S: splitTemp[3]},
-						objectTemp : {N: tempData}, time : {S: currentTime}})
-
-					mqttRelayDataSend (finalTempData,forwardingRule);
-					break;
-*/
-			
-				case "topic/sensor/data/pressure":
-
-					pressureCount ++;
-					var now = moment();
-					var currentTime = now.tz("America/New_York").format('YYYY-MM-DDTHH:mm:ss.SSSZZ');
-			
-					var barometricPressure = data.toString();
-					var splitBarometricPressure = barometricPressure.split("-");
-					var barometricPressureData = parseFloat(splitBarometricPressure[0]);
-					var finalPressureData = JSON.stringify({sno :pressureCount .toString(), gatewayId : uniqueGatewayId,
-						sensorId : "pressure-"+splitBarometricPressure[1], dataType :splitBarometricPressure[2],dataUnit:splitBarometricPressure[3],
-						pressure:barometricPressureData, time : currentTime})
-
-					mqttRelayDataSend (finalPressureData,forwardingRule);
-					break;
-
-			
-
-				case "topic/sensor/data/humidity":
-
-					humidCount ++;
-					var now = moment();
-					var currentTime = now.tz("America/New_York").format('YYYY-MM-DDTHH:mm:ss.SSSZZ');
-			
-					var humidData = data.toString();
-					var splitHumid = humidData.split("-");
-					var humidData = parseFloat(splitHumid[0]);
-					var finalHumidData = JSON.stringify({sno :humidCount.toString(), gatewayId : uniqueGatewayId,
-						sensorId : "humid-"+ splitHumid[1], dataType : splitHumid[2],dataUnit: splitHumid[3],
-						humidity :humidData, time : currentTime})
-
-					mqttRelayDataSend (finalHumidData,forwardingRule);
-					break;
-				case "topic/sensor/data/luxometer":
-
-					luxometerCount ++;
-					var now = moment();
-					var currentTime = now.tz("America/New_York").format('YYYY-MM-DDTHH:mm:ss.SSSZZ');
-			
-					var luxometer = data.toString();
-					var splitLuxometer =luxometer.split("-");
-					var luxometerData = splitLuxometer[0];
-					var finalLuxometerDataData = JSON.stringify({sno :gyroscopeCount .toString(), gatewayId : uniqueGatewayId,
-						sensorId : "luxometer-"+splitLuxometer[1], dataType :splitLuxometer[2],dataUnit:splitLuxometer[3],
-						luxometer: luxometerData, time : currentTime})
-
-					mqttRelayDataSend (finalLuxometerDataData,forwardingRule);
-					break;	
-				case "topic/sensor/data/so2":
-				case "topic/sensor/data/no2":
-				case "topic/sensor/data/co2":
-				case "topic/sensor/data/nh3":
-				case "topic/sensor/data/co":
-
-					var airQualityData = data.toString();
-					var splitAirQuality = airQualityData.split("-");
-					var sensorDataType = splitAirQuality[2];
-					var airQualityData = parseFloat(splitAirQuality[0]);
-					var finalAirQualityData = {sno : tempCount, gatewayId : uniqueGatewayId,
-						sensorId : sensorDataType+"-"+splitTemp[1], dataType : sensorDataType, dataUnit: splitAirQuality[3],
-						time : currentTime}
-					finalAirQualityData[sensorDataType] = sensorData;
-
-					mqttRelayDataSend (JSON.stringify(finalAirQualityData),forwardingRule);
-					break;
-				default:
-					log.error ("unknown topic : " + topic);
-					break;
-			}
-		});
 	}
+
 	if (callback) {
 		callback();
 	}
 }
 
+var localMqttMsgHandler = function (topic, data)
+{
+	var now = moment();
+	var currentTime   = now.tz("America/New_York").format('YYYY-MM-DDTHH:mm:ss.SSSZZ');
+
+	switch (topic) {
+
+		case "topic/sensor/config/request":
+			configModule.cloudConfigHandler(topic, data);
+			break;
+
+		case "topic/system/config/softwareUpgrade/update":
+
+			// Receive update message from securiot-upgrade service
+			updateRemoteCmdStatus ('softwareUpgrade', data.status, data.msg, '');
+			break;
+
+		case "topic/sensor/status":
+			
+			// Report list of sensor types to properties/reported/SensorStatus
+			
+			updateSensorStatus (data);
+			break;
+
+		case "topic/sensor/data/gps":
+
+			gpsCount ++;
+
+			var gpsData       = data.toString();
+			var splitOutput   = gpsData.split("-");
+			var healthScore   = parseFloat(splitOutput[0]);
+			var finalGpsData  = JSON.stringify({ sno : gpsCount.toString(), gatewayId : uniqueGatewayId,
+				sensorId : "gps-"+uniqueGatewayId, dataType : splitOutput[2],
+				latitude : splitOutput[0], longitude : splitOutput[1], time : currentTime});
+
+			mqttRelayDataSend (finalGpsData,forwardingRule);
+			break;
+	
+		case "topic/sensor/data/gyroscope":
+
+			gyroscopeCount ++;
+			var now = moment();
+			var currentTime = now.tz("America/New_York").format('YYYY-MM-DDTHH:mm:ss.SSSZZ');
+	
+			var gyroscope = data.toString();
+			var splitGyroscope =gyroscope.split("-");
+			var gyroscopeData = splitGyroscope[0];
+			var splitGyroscopeData = gyroscopeData.split(",");
+			var gyroscopeX = parseFloat(splitGyroscopeData[0]);
+			var gyroscopeY = parseFloat(splitGyroscopeData[1]);
+			var gyroscopeZ = parseFloat(splitGyroscopeData[2]);
+			var finalGyroscopeData = JSON.stringify({sno :gyroscopeCount .toString(), gatewayId : uniqueGatewayId,
+			sensorId : "gyroscope-"+splitGyroscope[1], dataType :splitGyroscope[2],dataUnit:splitGyroscope[3],
+			gyroscope_x:gyroscopeX, gyroscope_y:gyroscopeY, gyroscope_z:gyroscopeZ, time : currentTime})
+
+			mqttRelayDataSend (finalGyroscopeData,forwardingRule);
+			break;	
+	
+		case "topic/sensor/data/accelerometer":
+
+			accelerometerCount ++;
+			var now = moment();
+			var currentTime = now.tz("America/New_York").format('YYYY-MM-DDTHH:mm:ss.SSSZZ');
+	
+			var accelerometer = data.toString();
+			var splitAccelerometer = accelerometer.split("-");
+			var accelerometerData = splitAccelerometer[0];
+			var splitAccelerometerData = accelerometerData.split(",");
+			var accelerometerX = parseFloat(splitAccelerometerData[0]);
+			var accelerometerY = parseFloat(splitAccelerometerData[1]);
+			var accelerometerZ = parseFloat(splitAccelerometerData[2]);
+			var finalAccelerometerData = JSON.stringify({sno :gyroscopeCount .toString(), gatewayId : uniqueGatewayId,
+			sensorId : " accelerometer-"+splitAccelerometer[1], dataType :splitAccelerometer[2],dataUnit:splitAccelerometer[3],
+			accelerometer_x:accelerometerX, accelerometer_y:accelerometerY, accelerometer_z:accelerometerZ, time : currentTime})
+
+			mqttRelayDataSend (finalAccelerometerData,forwardingRule);
+			break;
+	
+		case "topic/sensor/data/magnetometer":
+
+			magnetometerCount ++;
+			var now = moment();
+			var currentTime = now.tz("America/New_York").format('YYYY-MM-DDTHH:mm:ss.SSSZZ');
+	
+			var magnetometer = data.toString();
+			var splitMagnetometer = magnetometer.split("-");
+			var  magnetometerData = splitMagnetometer[0];
+			var splitMagnetometerData = magnetometerData.split(",");
+			var magnetometerX = parseFloat(splitMagnetometerData[0]);
+			var magnetometerY = parseFloat(splitMagnetometerData[1]);
+			var magnetometerZ = parseFloat(splitMagnetometerData[2]);
+			var finalMagnetometerData = JSON.stringify({sno :gyroscopeCount .toString(), gatewayId : uniqueGatewayId,
+				sensorId : " magnetometer-"+splitMagnetometer[1], dataType :splitMagnetometer[2],dataUnit:splitMagnetometer[3],
+				magnetometer_x: magnetometerX, magnetometer_y: magnetometerY, magnetometer_z: magnetometerZ, time : currentTime})
+
+			mqttRelayDataSend (finalMagnetometerData,forwardingRule);
+			break;	
+	
+		case "topic/sensor/data/ambientTemperature":
+		case "topic/sensor/data/objectTemperature":
+
+			tempCount ++;
+			var now = moment();
+			var currentTime = now.tz("America/New_York").format('YYYY-MM-DDTHH:mm:ss.SSSZZ');
+	
+			var tempData = data.toString();
+			var splitTemp = tempData.split("-");
+			var sensorDataType = splitTemp[2];
+			var sensorData = parseFloat(splitTemp[0]);
+			var finalTempData = {sno : tempCount, gatewayId : uniqueGatewayId,
+				sensorId : sensorDataType+"-"+splitTemp[1], dataType : sensorDataType, dataUnit: splitTemp[3],
+				time : currentTime}
+			finalTempData[sensorDataType] = sensorData;
+
+			mqttRelayDataSend (JSON.stringify(finalTempData),forwardingRule);
+			break;
+/*	
+		case "topic/sensor/data/objectTemperature":
+
+			tempCount ++;
+			var now = moment();
+			var currentTime = now.tz("America/New_York").format('YYYY-MM-DDTHH:mm:ss.SSSZZ');
+	
+			var tempData = data.toString();
+			var splitTemp = tempData.split("-");
+			var tempData = parseFloat(splitTemp[0]);
+			var finalTempData = JSON.stringify({sno : {N: tempCount}, gatewayId : {S: uniqueGatewayId}, 
+				sensorId : {S: "objTemp-"+ splitTemp[1]}, dataType : {S: splitTemp[2]},dataUnit: {S: splitTemp[3]},
+				objectTemp : {N: tempData}, time : {S: currentTime}})
+
+			mqttRelayDataSend (finalTempData,forwardingRule);
+			break;
+*/
+	
+		case "topic/sensor/data/pressure":
+
+			pressureCount ++;
+			var now = moment();
+			var currentTime = now.tz("America/New_York").format('YYYY-MM-DDTHH:mm:ss.SSSZZ');
+	
+			var barometricPressure = data.toString();
+			var splitBarometricPressure = barometricPressure.split("-");
+			var barometricPressureData = parseFloat(splitBarometricPressure[0]);
+			var finalPressureData = JSON.stringify({sno :pressureCount .toString(), gatewayId : uniqueGatewayId,
+				sensorId : "pressure-"+splitBarometricPressure[1], dataType :splitBarometricPressure[2],dataUnit:splitBarometricPressure[3],
+				pressure:barometricPressureData, time : currentTime})
+
+			mqttRelayDataSend (finalPressureData,forwardingRule);
+			break;
+
+	
+
+		case "topic/sensor/data/humidity":
+
+			humidCount ++;
+			var now = moment();
+			var currentTime = now.tz("America/New_York").format('YYYY-MM-DDTHH:mm:ss.SSSZZ');
+	
+			var humidData = data.toString();
+			var splitHumid = humidData.split("-");
+			var humidData = parseFloat(splitHumid[0]);
+			var finalHumidData = JSON.stringify({sno :humidCount.toString(), gatewayId : uniqueGatewayId,
+				sensorId : "humid-"+ splitHumid[1], dataType : splitHumid[2],dataUnit: splitHumid[3],
+				humidity :humidData, time : currentTime})
+
+			mqttRelayDataSend (finalHumidData,forwardingRule);
+			break;
+
+		case "topic/sensor/data/luxometer":
+
+			luxometerCount ++;
+			var now = moment();
+			var currentTime = now.tz("America/New_York").format('YYYY-MM-DDTHH:mm:ss.SSSZZ');
+	
+			var luxometer = data.toString();
+			var splitLuxometer =luxometer.split("-");
+			var luxometerData = splitLuxometer[0];
+			var finalLuxometerDataData = JSON.stringify({sno :gyroscopeCount .toString(), gatewayId : uniqueGatewayId,
+				sensorId : "luxometer-"+splitLuxometer[1], dataType :splitLuxometer[2],dataUnit:splitLuxometer[3],
+				luxometer: luxometerData, time : currentTime})
+
+			mqttRelayDataSend (finalLuxometerDataData,forwardingRule);
+			break;	
+		case "topic/sensor/data/so2":
+		case "topic/sensor/data/no2":
+		case "topic/sensor/data/co2":
+		case "topic/sensor/data/nh3":
+		case "topic/sensor/data/co":
+
+			var airQualityData = data.toString();
+			var splitAirQuality = airQualityData.split("-");
+			var sensorDataType = splitAirQuality[2];
+			var airQualityData = parseFloat(splitAirQuality[0]);
+			var finalAirQualityData = {sno : tempCount, gatewayId : uniqueGatewayId,
+				sensorId : sensorDataType+"-"+splitTemp[1], dataType : sensorDataType, dataUnit: splitAirQuality[3],
+				time : currentTime}
+			finalAirQualityData[sensorDataType] = sensorData;
+
+			mqttRelayDataSend (JSON.stringify(finalAirQualityData),forwardingRule);
+			break;
+		default:
+			log.error ("unknown topic : " + topic);
+			break;
+	}
+}
 var mqttCloudClientInit = function (callback)
 {
    log.debug('MQTT cloud client init');
