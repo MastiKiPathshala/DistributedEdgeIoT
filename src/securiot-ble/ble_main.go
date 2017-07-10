@@ -212,7 +212,7 @@ func ConnectAndDisconnect(tagAddress string){
 		if err != nil {
 			panic(err)
 		}
-		log.Debug("sensorTag: ",sensorTag)
+		//log.Debug("sensorTag: ",sensorTag)
 		
 		
 		
@@ -232,55 +232,17 @@ func ConnectAndDisconnect(tagAddress string){
 		
 		luxometer:= sensorTag.Luxometer.GetName()
 		log.Debug("sensor name: ",luxometer)
-		//................Enable..............................
+		//...........read sensorTag info.............................
 		
-		/*err = sensorTag.Temperature.Enable()
-			if err != nil {
-				panic(err)
-			}
-		
-		err = sensorTag.Humidity.Enable()
-			if err != nil {
-				panic(err)
-			}	
-			err = sensorTag.Mpu.Enable()
-			if err != nil {
-				panic(err)
-			}	*/
-		//............IsEnabled................................
-		
-		boolean,err := sensorTag.Temperature.IsEnabled() 
-			if err != nil {
-				panic(err)
-			}
-			log.Debug("IsEnabled: ",boolean)
-		
-		//......read temp data........................
-		
-		/*temp, err := sensorTag.Temperature.Read()
+		devInfo, err := sensorTag.DeviceInfo.Read()
 	 	if err != nil {
 	 		panic(err)
 	 	}
-	 	log.Debug("Temperature C°", temp)
+	 	log.Debug("FirmwareVersion: ", devInfo.FirmwareVersion)
+		log.Debug("HardwareVersion: ", devInfo.HardwareVersion)
+		log.Debug("Manufacturer: ", devInfo.Manufacturer)
+		log.Debug("Model: ", devInfo.Model)
 		
-		humid, err := sensorTag.Humidity.Read()
-	 	if err != nil {
-	 		panic(err)
-	 	}
-	 	log.Debug("Humidity: ", humid)
-		
-		
-		mpu1, err1 := sensorTag.Mpu.Read()
-	 	if err1 != nil {
-	 		panic(err1)
-	 	}
-	 	log.Debug("mpu: ", mpu1)
-		
-		barometric1, err2 := sensorTag.Barometric.Read()
-	 	if err2 != nil {
-	 		panic(err2)
-	 	}
-		log.Debug("barometric pressure: ", barometric1)*/
 		//........StartNotify......................
 		
 		err = sensorTag.Temperature.StartNotify(tagAddress)
@@ -307,14 +269,9 @@ func ConnectAndDisconnect(tagAddress string){
 		if err != nil {
 	 		panic(err)
 	 	}
-		//...........IsNotifying................
 		
-		boolean,err = sensorTag.Temperature.IsNotifying() 
-			if err != nil {
-				panic(err)
-			}
-			log.Debug("IsNotifying: ",boolean)
-			
+		//......receive emitted data of different sensors.............
+		
 		dev.On("data", emitter.NewCallback(func(ev emitter.Event) {
 		
 			x := ev.GetData().(api.DataEvent)

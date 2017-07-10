@@ -229,7 +229,7 @@ var mqttLocalClientInit = function(callback)
 
 		localClient.on('message', function (topic, data) {
 
-			log.trace("data from " + topic + " topic : " + data.toString());
+			log.trace("data from topic: " + topic + " data : " + data.toString());
 
 			var now = moment();
 			var currentTime   = now.tz("America/New_York").format('YYYY-MM-DDTHH:mm:ss.SSSZZ');
@@ -412,15 +412,15 @@ var mqttLocalClientInit = function(callback)
 				case "topic/sensor/data/co2":
 				case "topic/sensor/data/nh3":
 				case "topic/sensor/data/co":
-
+				
 					var airQualityData = data.toString();
 					var splitAirQuality = airQualityData.split("-");
 					var sensorDataType = splitAirQuality[2];
 					var airQualityData = parseFloat(splitAirQuality[0]);
 					var finalAirQualityData = {sno : tempCount, gatewayId : uniqueGatewayId,
-						sensorId : sensorDataType+"-"+splitTemp[1], dataType : sensorDataType, dataUnit: splitAirQuality[3],
+						sensorId : sensorDataType+"-"+splitAirQuality[1], dataType : sensorDataType, dataUnit: splitAirQuality[3],
 						time : currentTime}
-					finalAirQualityData[sensorDataType] = sensorData;
+					finalAirQualityData[sensorDataType] = airQualityData;
 
 					mqttRelayDataSend (JSON.stringify(finalAirQualityData),forwardingRule);
 					break;
@@ -492,7 +492,7 @@ var mqttRelayDataSend = function (finalData,forwardingRule)
    log.trace("data from local broker: "+finalData);
 
    for (var rule in forwardingRule) {
-	
+	   
       switch (forwardingRule[rule].match.data_type) {
 		
       case "any":
@@ -541,7 +541,7 @@ var sendToCloud = function(sensorData, callback)
 
 		case "azure":
 			var message = new Message (sensorData);
-
+			log.trace("sensorData to azure cloud: "+JSON.stringify(message));
 			cloudClient.sendEvent(message, function (err) {
 
 				if (err) {
