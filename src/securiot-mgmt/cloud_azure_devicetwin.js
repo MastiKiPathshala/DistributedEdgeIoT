@@ -41,7 +41,7 @@ var initTelemetryConfigChange = function(twin) {
 
 			// Publish this config change to internal MQTT system
 			//localClient.publish ('topic/sensor/config', JSON.stringify(currentTelemetryConfig.pendingConfig));
-			configModule.publishCurrentConfig(twin);
+			configModule.publishNewConfig(twin);
 
 			completeTelemetryConfigChange(twin);
 		}

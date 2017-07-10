@@ -26,26 +26,36 @@ var mqttDeleteTopic  = "topic/sensor/config/delete";
 var mqttRequestTopic = "topic/sensor/config/request";
 var mqttUpdateTopic  = "topic/sensor/config/update";
 
+exports.cloudConfigInit = function()
+{
+		if (typeof localClient != "undefined") {
+			localClient.subscribe(mqttRequestTopic);
+		}
+
+		publishSensorConfig();
+}
+
 exports.cloudConfigHandler = function(topic, data)
 {
 
 	// Received config update request from sensor services
-	if (topic === mqttRequestTopic) {
+	if ((topic === null) || (topic === mqttRequestTopic)) {
 
-		publishCurrentConfig(data);
+		publishSensorConfig();
 	} else {
 
 		log.error ("unknown topic : " + topic);
 	}
 }
 
-exports.publishCurrentConfig = function(data)
+exports.publishNewConfig = function(data)
 {
 	publishSensorConfig(data);
 }
 
 var publishSensorConfig = function(data)
 {
+	log.debug('publishing local sensor config');
 	if (fs.existsSync('/etc/securiot.in/config.txt')) {
 
 		var localConfigFile   = fs.readFileSync('/etc/securiot.in/config.txt');
@@ -79,6 +89,7 @@ var publishSensorConfig = function(data)
 				}
 
 				if (found === false) {
+					log.debug('delete sensor:' + JSON.stringify(localSensorConfig));
 					localClient.publish(mqttDeleteTopic, JSON.stringify (localSensorConfig));
 				}
 			}
@@ -103,6 +114,7 @@ var publishSensorConfig = function(data)
 				}
 
 				if (found === false) {
+					log.debug('add sensor:' + JSON.stringify(cloudSensorConfig));
 					localClient.publish(mqttAddTopic, JSON.stringify (cloudSensorConfig));
 				}
 			}
@@ -123,7 +135,8 @@ var publishSensorConfig = function(data)
 
 					if ((idx == jdx) &&
 						 (cloudSensorConfig.frequency != localSensorConfig.frequency)) {
-					    localClient.publish(mqttUpdateTopic, JSON.stringify (cloudSensorConfig));
+						log.debug('update sensor:' + JSON.stringify(cloudSensorConfig));
+						localClient.publish(mqttUpdateTopic, JSON.stringify (cloudSensorConfig));
 					}
 				}
 			}

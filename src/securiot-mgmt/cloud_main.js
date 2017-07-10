@@ -200,8 +200,7 @@ var mqttLocalClientInit = function(callback)
 {
    log.debug('MQTT local client init');
 
-   exec('cat /sys/class/net/eth0/address',
-      function (error, stdout, stderr) {
+   exec('cat /sys/class/net/eth0/address', function (error, stdout, stderr) {
 
          if (error != null) {
                log.debug('exec error: ' + error);
@@ -212,7 +211,7 @@ var mqttLocalClientInit = function(callback)
          uniqueGatewayId = mac[0].toString();
 	});
 
-	localClient    = mqtt.connect('mqtt://localhost')
+	localClient    = mqtt.connect('mqtt://localhost');
 
 	localClient.on('connect', function () {
 
@@ -221,11 +220,11 @@ var mqttLocalClientInit = function(callback)
 		localClient.subscribe('topic/sensor/data/#');
 		localClient.subscribe('topic/sensor/status');
 		localClient.subscribe('topic/system/config/softwareUpgrade/update');
+
+      configModule.cloudConfigInit();
 	});
 
 	localClient.on('message', function (topic, data) {
-
-		log.trace("data from " + topic + " topic : " + data.toString());
 
 		localMqttMsgHandler(topic, data);
    });
