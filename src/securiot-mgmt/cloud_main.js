@@ -56,6 +56,9 @@ var gyroscopeCount = 0;
 var accelerometerCount = 0;
 var magnetometerCount = 0;
 var luxometerCount  = 0;
+var smartBinCount = 0;
+var smartParkingCount = 0;
+var vehicleOBDCount = 0;
 
 cloudState     = new EventEmitter();
 
@@ -444,6 +447,40 @@ var localMqttMsgHandler = function (topic, data)
 
 			mqttRelayDataSend (JSON.stringify(finalAirQualityData),forwardingRule);
 			break;
+
+		case "topic/sensor/data/smartBin":
+
+			smartBinCount ++;
+
+			var smartBinData = JSON.parse(data);
+			var finalSmartBinData  = JSON.stringify({ sno : smartBinCount.toString(), gatewayId : uniqueGatewayId,
+				sensorData : smartBinData, dataType : "smartBin", time : currentTime});
+
+			mqttRelayDataSend (finalSmartBinData,forwardingRule);
+			break;
+
+		case "topic/sensor/data/smartParking":
+
+			smartParkingCount ++;
+
+			var smartParkingData = JSON.parse(data);
+			var finalsmartParkingData  = JSON.stringify({ sno : smartParkingCount.toString(), gatewayId : uniqueGatewayId,
+				sensorData : smartParkingData, dataType : "smartParking", time : currentTime});
+
+			mqttRelayDataSend (finalsmartParkingData,forwardingRule);
+			break;
+
+		case "topic/sensor/data/vehicleOBD":
+
+			vehicleOBDCount ++;
+
+			var vehicleOBDData = JSON.parse(data);
+			var finalvehicleOBDData  = JSON.stringify({ sno : vehicleOBDCount.toString(), gatewayId : uniqueGatewayId,
+				sensorData : vehicleOBDData, dataType : "vehicleOBD", time : currentTime});
+
+			mqttRelayDataSend (finalvehicleOBDData,forwardingRule);
+			break;
+
 		default:
 			log.error ("unknown topic : " + topic);
 			break;
@@ -502,59 +539,32 @@ var mqttCloudClientInit = function (callback)
    if (callback) { callback(); }
 }
 
-var mqttRelayDataSend = function (finalData, forwardingRule)
+var mqttRelayDataSend = function (finalData,forwardingRule)
 {
-   log.trace("data from local broker: "+finalData);
+	log.trace("data from local broker: "+finalData);
 
-	if (typeof forwardingRule === "undefined" ||
-		forwardingRule === null) {
+	for (var rule in forwardingRule) {
 
-		sendToCloud(finalData);
+		switch (forwardingRule[rule].match.data_type) {
 
-	} else {
+		case "any":
 
-      for (var rule in forwardingRule) {
-	      
-         switch (forwardingRule[rule].match.data_type) {
-	   	
-         case "any":
-      
-            switch(forwardingRule[rule].then.send_to) {
-      
-            case "cloud":
-               sendToCloud(finalData);
-               return;
-      
-            case "analytics":
-      
-               //sendToAnaltics(dataForForwarding);
-               return;
-      
-            case "daisy-chained":
-               return;
-      
-            }
-            break;
-      
-         case "HY":
-      
-            switch(forwardingRule[rule].then.sendto) {
-      
-            case "cloud":
-               //sendToCloud(mesage);
-               return;
-      
-            case "analytics":
-               //sendToAnaltics(message);
-               return;
-      
-            case "daisy-chained":
-               return;
-      
-            }
-            break;
-         }
-      }
+			switch(forwardingRule[rule].then.send_to) {
+
+				case "cloud":
+					sendToCloud(finalData);
+					return;
+
+				case "analytics":
+					//sendToAnaltics(dataForForwarding);
+					return;
+
+				case "daisy-chained":
+					return;
+
+			}
+			break;
+		}
 	}
 }
 
@@ -589,7 +599,7 @@ var sendToCloud = function(sensorData, callback)
 
 		case "AWS":
 			awsSensorDataTopic = awsBaseTopic+'/topic/sensor/data';
-			cloudClient.publish(awsSensorDataTopic, JSON.stringify (sensorData));
+			cloudClient.publish(awsSensorDataTopic, sensorData);
 			log.debug("Topic: " + awsSensorDataTopic + " Message: " + sensorData);
 			break;
 	}
