@@ -33,49 +33,83 @@ upgrade.get('/', function(req, res, next) {
 
 upgrade.post('/:nextVersion', function(req, res, next) {
 
-	var upgradeVersion = req.params.nextVersion;
-	softwareUpgrade (upgradeVersion, res);
+   var upgradeVersion = req.params.nextVersion;
+
+   softwareUpgrade (upgradeVersion, res, function(state, message) {
+
+      if (message) {
+         log.debug(message);
+         io.emit('update',{action:'update', status:message});
+      }
+      res.json({success: state});
+   });
 })
 
-var softwareUpgrade = function (upgradeVersion, res) {
+var softwareUpgrade = function (upgradeVersion, res, cb)
+{
    var state = false;
-   var upgradePid;
 
    log.debug('upgrade version ' + upgradeVersion);
- 
+
    if ((!upgradeVersion) || (upgradeVersion === 'undefined')) {
 
       var message = 'upgrade version value is missing';
       io.emit('update',{action:'update', status:message});
-      res.json({success: state});
+
+      if (cb) {
+         cb(state, message);
+      } else {
+
+         cloudConnect.updateRemoteCmdStatus ('softwareUpgrade', 'Failed', message, '');
+         cloudConnect.sendRemoteCmdResponse ('softwareUpgrade', res, {success: 'false',msg: message});
+         log.debug(message);
+      }
       return;
    }
- 
+
    if (upgradeVersion === activeVersion) {
 
       var message = 'upgrade version is same as installed';
-      log.debug(message);
-      //io.emit('update',{action:'update',status:message});
-		cloudConnect.updateRemoteCmdStatus ('softwareUpgrade', 'Failed', message, '');
-      //res.json({success: state});
-		cloudConnect.sendRemoteCmdResponse ('softwareUpgrade', res, {success: 'false',msg: message});
-		return;
+
+      if (cb) {
+         cb(state, message);
+      } else {
+         log.debug(message);
+         cloudConnect.updateRemoteCmdStatus ('softwareUpgrade', 'Failed', message, '');
+         cloudConnect.sendRemoteCmdResponse ('softwareUpgrade', res, {success: 'false',msg: message});
+      }
+      return;
    }
- 
+
    if (upgradeState != 0) {
 
       var message = 'another upgrade is currently in progress';
       io.emit('update',{action:'update',status:message});
-      res.json({success: state});
+
+      if (cb) {
+         cb(state, message);
+      } else {
+         log.debug(message);
+         cloudConnect.updateRemoteCmdStatus ('softwareUpgrade', 'Failed', message, '');
+         cloudConnect.sendRemoteCmdResponse ('softwareUpgrade', res, {success: 'false',msg: message});
+      }
       return;
    }
 
-	var upgradeReq = {};
-	upgradeReq.currentVersion = activeVersion;
-	upgradeReq.upgradeVersion = upgradeVersion;
-	upgradeReq.hardwareVersion = "RPi3";
+   var message = 'upgrade initiated';
 
-	localClient.publish ("topic/system/config/softwareUpgrade/trigger", JSON.stringify (upgradeReq));
+   var upgradeReq = {};
+   upgradeReq.currentVersion  = activeVersion;
+   upgradeReq.upgradeVersion  = upgradeVersion;
+   upgradeReq.hardwareVersion = "RPi3";
+
+   localClient.publish ("topic/system/config/softwareUpgrade/trigger", JSON.stringify (upgradeReq));
+
+   if (cb) {
+      cb(state, message);
+   } else {
+      log.debug(message);
+   }
 }
 
 // command functions
@@ -95,15 +129,15 @@ function forEverSvcCmd (svcName, svcModule, scriptName, cb_error, cb_next)
         me.stderr = data.toString();
 
    });
-   
-   child.stdout.on('data', function (data) { 
+
+   child.stdout.on('data', function (data) {
 
         data += ' ';
         me.stdout = data.toString();
         log.debug('forever-service: stdout:' + me.stdout);
 
    });
-  
+
    child.stdout.on('end', function () {
 
       if (me.stdout) {
@@ -115,7 +149,7 @@ function forEverSvcCmd (svcName, svcModule, scriptName, cb_error, cb_next)
       }
 
    });
-   
+
    child.on('exit', function (code, signal)
          { if (code) {ret_code = code;} });
 
@@ -125,7 +159,7 @@ function forEverSvcCmd (svcName, svcModule, scriptName, cb_error, cb_next)
 
       if (ret_code) {
 
-         log.debug ('forever-service: error (' + ret_code + ') ' + svcName); 
+         log.debug ('forever-service: error (' + ret_code + ') ' + svcName);
 
          setTimeout(cb_error, SYS_DELAY);
 
@@ -146,7 +180,7 @@ var procDone = function(res)
 {
 }
 
-var upgradeSvcInstall = function() 
+var upgradeSvcInstall = function()
 {
    forEverSvcCmd(UPGRADE_SVC_NAME, UPGRADE_SVC, 'upgrade.js' + procErr, procDone);
 }
