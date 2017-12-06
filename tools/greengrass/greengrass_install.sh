@@ -180,9 +180,9 @@ aws iot attach-thing-principal --thing-name $GG_CORE_THINGNAME --principal $GG_C
 wget http://www.symantec.com/content/en/us/enterprise/verisign/roots/VeriSign-Class%203-Public-Primary-Certification-Authority-G5.pem 
 sudo mv VeriSign-Class\ 3-Public-Primary-Certification-Authority-G5.pem $ZEDEDA_DIR/root-ca.pem 
 IOTHOST=`aws iot describe-endpoint | jq -r ".endpointAddress"` 
-echo "{     \"coreThing\": {         \"caPath\": \"root-ca.pem\",         \"certPath\": \"cloud.pem.crt\",         \"keyPath\": \"private.pem.key\",         \"thingArn\": \"$GG_CORE_THINGARN\",         \"iotHost\": \"$IOTHOST\",         \"ggHost\": \"greengrass.iot.us-west-2.amazonaws.com\",         \"keepAlive\": 600     },     \"runtime\": {         \"cgroup\": {             \"useSystemd\": \"yes\"         }     } }" > /tmp/config.json 
+echo "{     \"coreThing\": {         \"caPath\": \"root-ca.pem\",         \"certPath\": \"cloud.pem.crt\",         \"keyPath\": \"private.pem.key\",         \"thingArn\": \"$GG_CORE_THINGARN\",         \"iotHost\": \"$IOTHOST\",         \"ggHost\": \"greengrass.iot.us-west-2.amazonaws.com\",         \"keepAlive\": 600     },     \"runtime\": {         \"cgroup\": {             \"useSystemd\": \"yes\"         }     } }" > $CERT_DIR_NAME/config.json
 echo "Creating config image for Greengrass core"
-build_raw_image image.GGCore_config_$GG_THING_NAME-core.img image.GGCore_Certs_$GG_THING_NAME-core.img $CERT_DIR_NAME
+build_raw_image image.GGCore_Config_$GG_THING_NAME-core.img image.GGCore_Certs_$GG_THING_NAME-core.img $CERT_DIR_NAME
 #
 # Create thing for n devices 
 #

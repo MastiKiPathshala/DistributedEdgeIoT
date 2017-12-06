@@ -159,7 +159,7 @@ def GenerateRandNumber():
     mqttRelayDataSend(finalObjTempData)
 
 
-setInterval(5,GenerateRandNumber)
+#setInterval(5,GenerateRandNumber)
 def mqttRelayDataSend(data):
     myAWSIoTMQTTClient.publish(sensorTelemetryTopic, data, 0)
     print data
@@ -352,6 +352,7 @@ while True:
     }
     print (thingMsg)
     myAWSIoTMQTTClient.publish(deviceMetricTopic, json.dumps(thingMsg), 0)
+    GenerateRandNumber()
     loopCount += 1
-    time.sleep(1)
+    time.sleep(5)
 # end-while
