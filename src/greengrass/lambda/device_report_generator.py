@@ -10,7 +10,6 @@
 # long-lived it will run forever when deployed to a Greengrass core.  The handler
 # will NOT be invoked in our example since the we are executing an infinite loop.
 
-import datetime
 import greengrasssdk
 import json
 import platform
@@ -36,7 +35,6 @@ thingFilePath = '/etc/zededa/thinglist'
 
 def greengrass_hello_world_run():
     try:
-        fileInfo = os.stat (thingFilePath)
         with open (thingFilePath) as tFile:
             thingList = tFile.read()
             thingListJson = json.loads (thingList)
@@ -51,7 +49,7 @@ def greengrass_hello_world_run():
         "AppName": "ZededaGGDemoApp",
         "AppUUID": "208-2017-12-04",
         "Platform": myPlatform,
-        "Time": str(datetime.datetime.utcnow())
+        "Time": time.asctime()
     }
     coreMsg = {
         "coreId": coreId,

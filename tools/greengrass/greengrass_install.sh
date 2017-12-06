@@ -1,5 +1,10 @@
 build_raw_image ()
 {
+    # $1 config image name
+    # $2 cert image name
+    # $3 cert dir name
+
+echo "Creating config image for Greengrass things"
 dd if=/dev/zero of=$1 bs=1M count=1
 mkfs ext4 -F $1
 mkdir -p $3/mount_config/
@@ -7,7 +12,8 @@ mount -o loop,rw,sync $1 $3/mount_config
 cp $3/config.json $3/mount_config/.
 umount $PWD/$1
 rm -rf $3/mount_config
-echo "Creating certs image for Greengrass core"
+
+echo "Creating certs image for Greengrass things"
 dd if=/dev/zero of=$2 bs=1M count=1
 mkfs ext4 -F $2
 mkdir -p $3/mount_certs/
@@ -24,6 +30,7 @@ build_raw_disk_image()
     # $1 config image name
     # $2 cert image name
     # $3 cert dir name
+
     config=$1
     certs=$2
 
@@ -196,7 +203,7 @@ GG_CERTARN=`jq -r ".certificateArn" $CERT_FILE_NAME`
 jq -r ".certificatePem" $CERT_FILE_NAME > $CERT_DIR_NAME/cloud.pem.crt 
 jq -r ".keyPair.PrivateKey" $CERT_FILE_NAME > $CERT_DIR_NAME/private.pem.key 
 jq -r ".keyPair.PublicKey" $CERT_FILE_NAME > $CERT_DIR_NAME/public.pem.key
-echo "{      \"caPath\": \"root-ca.pem\",         \"certPath\": \"cloud.pem.crt\",         \"keyPath\": \"private.pem.key\",      \"iotHost\": \"$IOTHOST\",   }" > $CERT_DIR_NAME/config.json 
+echo "{      \"caPath\": \"root-ca.pem\",         \"certPath\": \"cloud.pem.crt\",         \"keyPath\": \"private.pem.key\",        \"thingName\": \"$GG_THINGNAME\",        \"iotHost\": \"$IOTHOST\"}" > $CERT_DIR_NAME/config.json 
 if [ $index -gt 1 ]
 then
 echo ", " >> /tmp/config-devices.json

@@ -10,10 +10,10 @@
 # long-lived it will run forever when deployed to a Greengrass core.  The handler
 # will NOT be invoked in our example since the we are executing an infinite loop.
 
-import datetime
 import greengrasssdk
 import json
 import platform
+import time
 
 # Creating a greengrass core sdk client
 client = greengrasssdk.client('iot-data')
@@ -33,7 +33,7 @@ def send_device_mro(thingId, mroType):
         "AppName": "ZededaGGDemoApp",
         "AppUUID": "ZededaGGDemoApp",
         "Platform": myPlatform,
-        "Time": str(datetime.datetime.utcnow())
+        "Time": time.asctime()
     }
     mroMsg = {
         "coreId": coreId,
@@ -74,10 +74,10 @@ def function_handler(event, context):
         tFile.write (json.dumps(thingListJson))
         tFile.close()
     # end-with
-    if event["data"]["cpu"]["avgload"] > 0.01 || event["data"]["cpu"]["currentload"] > 0.2:
+    if float(event["Data"]["cpuUtilization"]) > 3.00:
         send_device_mro (thingId, "High CPU")
     # end-if
-    if event["data"]["memory"]["used"] > 0.01 || event["data"]["memory"]["free"] < 0.2:
+    if int(event["Data"]["freeMemory"]) < 3500000:
         send_device_mro (thingId, "Low Memory")
     # end-if
     return True
